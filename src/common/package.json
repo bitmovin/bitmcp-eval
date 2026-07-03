@@ -1,0 +1,10 @@
+{
+  "name": "@bitmcp_eval/common", 
+  "type" : "module",
+  "exports" : {
+   "." : "./startup.js",
+   "./agents": "./agent_invocations.js"
+
+  }
+
+}

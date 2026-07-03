@@ -8,11 +8,18 @@
   },
   "keywords": [],
   "author": "",
-  "type" : "module",
+  "type": "module",
   "license": "ISC",
+  "workspaces": [
+    "src/*", 
+    "src/tui/*",
+    "src/common/*"
+  ],
   "dependencies": {
     "@octokit/rest": "^22.0.1",
     "express": "^5.2.1",
-    "octokit": "^5.0.5"
+    "ink": "^7.1.0",
+    "octokit": "^5.0.5",
+    "react": "^19.2.7"
   }
 }
