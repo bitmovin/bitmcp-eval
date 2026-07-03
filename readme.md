@@ -6,10 +6,10 @@ llm agents.
 ## Main features:
 
 * formulate testcases which contain
-** the prompt
-** expected tool invocations
-** expected tool arguments
-** exptected tone of the response
+* the prompt
+* expected tool invocations
+* expected tool arguments
+* exptected tone of the response
 
 * execute multiple evaluation runs against your mcp server, which can run locally or remote
 
