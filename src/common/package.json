@@ -1,9 +1,21 @@
 {
   "name": "@bitmcp_eval/common", 
   "type" : "module",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && num run build"
+  },
   "exports" : {
-   "." : "./startup.js",
-   "./agents": "./agent_invocations.js"
+
+   "./config": {
+    "types": "./dist/config.d.ts",
+    "default" : "./dist/config.js"
+   },
+   "./agents": {
+      "types": "./dist/agent_invocations.d.ts",
+      "default": "./dist/agent_invocations.js"
+   }
 
   }
 

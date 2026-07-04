@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "es2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "declaration": true,
+        "outDir": "./dist",
+        "rootDir": ".",
+        "allowJs": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "types": ["node"]
+    },
+    "include": ["*.ts", "*.js"],
+    "exclude": ["dist"],
+
+}

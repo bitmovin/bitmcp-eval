@@ -1,5 +1,5 @@
 {
-	"name": "ink-cli",
+	"name": "@bitmcp_eval/ink-cli",
 	"version": "0.0.0",
 	"license": "MIT",
 	"bin": "dist/cli.js",
@@ -8,8 +8,10 @@
 		"node": ">=16"
 	},
 	"scripts": {
-		"build": "babel --out-dir=dist source",
-		"dev": "babel --out-dir=dist --watch source",
+		"build": "tsc",
+		"dev": "tsx watch source/cli.tsx",
+		"start": "node dist/cli.js",
+		"start-dev": "npm run dev",
 		"test": "prettier --check . && xo && ava"
 	},
 	"files": [
@@ -34,6 +36,7 @@
 		"import-jsx": "^5.0.0",
 		"ink-testing-library": "^3.0.0",
 		"prettier": "^2.8.7",
+		"tsx": "^4.23.0",
 		"xo": "^0.53.1"
 	},
 	"ava": {

@@ -4,16 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run build --workspace @bitmcp_eval/common && npm run build --workspace @bitmcp_eval/ink-cli",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-tui": "npm run start-dev --workspace @bitmcp_eval/ink-cli"
   },
   "keywords": [],
   "author": "",
   "type": "module",
   "license": "ISC",
   "workspaces": [
-    "src/*",
-    "src/tui/*",
-    "src/common/*"
+    "src/tui/ink-cli",
+    "src/common"
   ],
   "dependencies": {
     "@octokit/rest": "^22.0.1",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "@types/react": "^19.2.17",
     "typescript": "^6.0.3"
   }
 }

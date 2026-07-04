@@ -1,17 +1,34 @@
 import React, {useState, useEffect} from 'react';
 import {Box, Text, Static} from 'ink';
 import {Spinner, ProgressBar} from '@inkjs/ui';
-import { parseConfig } from '@bitmcp_eval/common';
+import { parseConfig, Config } from '@bitmcp_eval/common/config';
 import { runClaude } from '@bitmcp_eval/common/agents';
 
+type ClaudeResult = Promise<string>
 
-function renderOverallState(config, tests) {
+type Test = {
+	id: string;
+	prompt: string;
+};
+
+type Props = {
+	name?: string;
+};
+
+
+
+function renderOverallState(config : Config | null, tests : Test[]) {
   if (!tests || tests.length == 0) return; 
+  if (!config) return;
   let lastTest = tests[tests.length-1]; 
 
   return (
    <>
+    
     <Box key={lastTest.id} flexDirection="column">
+      <Box>
+        <Text>Configuration: {config.testcases.source}</Text>
+      </Box>
       <Text color="green">✔ {lastTest.id}</Text>
       <Text> {lastTest.prompt} </Text>
     </Box>
@@ -24,12 +41,12 @@ function renderOverallState(config, tests) {
 }
 
 
-export default function App({name = 'Stranger'}) {
+export default function App() {
 
-  const [config, setConfig] = useState(null);
-  const [tests, setTests] = useState([]);
-  const [error, setError] = useState(null);
-  const [claudeResult, setClaudeResult] = useState(null);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [tests, setTests] = useState<Test[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const [claudeResult, setClaudeResult] = useState<string | null>(null);
 
   useEffect(() => {
     setConfig(parseConfig());
@@ -37,7 +54,7 @@ export default function App({name = 'Stranger'}) {
 
   useEffect(() => {
     let completedTests = 0;
-    let timer;
+    let timer : ReturnType<typeof setTimeout>;
    
     const run = () => {
 			if (completedTests++ < 10) {
@@ -66,10 +83,10 @@ export default function App({name = 'Stranger'}) {
  
     (async () => {
       try { 
-        const out = await runClaude('haskell advantages, short summary');
+        const out : string = await runClaude('haskell advantages, short summary');
         setClaudeResult(out);
         
-      } catch(err) {
+      } catch(err : any) {
         setError(err);
       }
      })();   
