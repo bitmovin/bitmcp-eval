@@ -8,9 +8,10 @@
 		"node": ">=16"
 	},
 	"scripts": {
+		"clean" : "rm -rf dist",
 		"build": "tsc",
 		"dev": "tsx watch source/cli.tsx",
-		"start": "node dist/cli.js",
+		"start": "node dist/cli.js ",
 		"start-dev": "npm run dev",
 		"test": "prettier --check . && xo && ava"
 	},

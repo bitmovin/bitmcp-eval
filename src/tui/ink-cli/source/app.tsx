@@ -1,97 +1,106 @@
 import React, {useState, useEffect} from 'react';
-import {Box, Text, Static} from 'ink';
+import {Box, Text, Static, Spacer} from 'ink';
 import {Spinner, ProgressBar} from '@inkjs/ui';
 import { parseConfig, Config } from '@bitmcp_eval/common/config';
 import { runClaude } from '@bitmcp_eval/common/agents';
+import { loadTestCases, TestCase } from '@bitmcp_eval/common/testCases';
+import Header from './header.js'
+import ConfigPrinter from './config_printer.js';
+import { appendFileSync } from 'node:fs';
 
-type ClaudeResult = Promise<string>
+function renderCurrentTest(currentTest : TestCase) {
+ 
+  return (
+    <Text>Test: {currentTest.prompt}</Text>
+  )
+}
 
-type Test = {
-	id: string;
-	prompt: string;
-};
+function renderClaudeResult(claudeResult : string) {
+  return (
+    <Text>Result: {claudeResult}</Text>
+  )
+}
 
-type Props = {
-	name?: string;
-};
+function renderOverallState(config : Config | null, testCases : TestCase[], 
+        currentTest : TestCase | null, 
+        currentClaudeResult : string | null) {
 
+  if (!config) return null;
 
+  const testCasesElement = (testCases != null && testCases.length > 0)
+  ? (<Text>{testCases.length} TestCases loaded! </Text>)
+  : (
+    <Spinner label="Loading testcases..."/> 
+  );
 
-function renderOverallState(config : Config | null, tests : Test[]) {
-  if (!tests || tests.length == 0) return; 
-  if (!config) return;
-  let lastTest = tests[tests.length-1]; 
+  const currentTestElement = currentTest ? renderCurrentTest(currentTest) : (<></>);
 
+  const currentClaudeResultElement = currentClaudeResult ? renderClaudeResult(currentClaudeResult) : (<Spinner label="test running.."/>);
+    
   return (
    <>
     
-    <Box key={lastTest.id} flexDirection="column">
-      <Box>
-        <Text>Configuration: {config.testcases.source}</Text>
-      </Box>
-      <Text color="green">✔ {lastTest.id}</Text>
-      <Text> {lastTest.prompt} </Text>
+    <Box flexDirection="column">
+      <Header title="MCP Evaluation Run"/>
+      <Spacer/>
+      <ConfigPrinter config={config}/>
+      {testCasesElement}
+      {currentTestElement}
+      {currentClaudeResultElement}
+
     </Box>
-    <Box><Text>{tests.length} done, running…</Text><Spinner type="dots" /></Box>
-    <Box width={30}>
-      <Text>Tests: </Text><ProgressBar value={Math.round((tests.length/10) * 100)} /><Text>{tests.length/10 * 100}%</Text>
-    </Box>
+   
  </>
   )
+}
+
+function prepareTestCases(setTestCases : (tcs : TestCase[]) => void, config : Config) {
+  appendFileSync('debug_app.log', 'in preapreTestCases');
+  
+  async function run()  {
+    appendFileSync('debug_app.log', 'in run1');
+    let testCases = await loadTestCases(config.testcases.url);
+    setTestCases(testCases);
+  }
+  run();
 }
 
 
 export default function App() {
 
   const [config, setConfig] = useState<Config | null>(null);
-  const [tests, setTests] = useState<Test[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [claudeResult, setClaudeResult] = useState<string | null>(null);
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [currentTest, setCurrentTest] = useState<TestCase | null>(null);
 
   useEffect(() => {
     setConfig(parseConfig());
   }, []); 
 
   useEffect(() => {
-    let completedTests = 0;
-    let timer : ReturnType<typeof setTimeout>;
-   
-    const run = () => {
-			if (completedTests++ < 10) {
-					setTests(prevTests => [
-						...prevTests,
-						{
-							 id: "test_" + prevTests.length,
-							 prompt: "my test prompt",
-						},
-
-							 ]);
-									timer = setTimeout(run, 1000);
-			} 
-    };     
-  
-    run();
-    return () => {
-      clearTimeout(timer);
-    };
- 
-  }, []);
-
+    if (!config) return;
+    prepareTestCases(setTestCases, config);
+  }, [config]);
 
   useEffect(() => {
-    if (!config) return;
- 
-    (async () => {
-      try { 
-        const out : string = await runClaude('haskell advantages, short summary');
-        setClaudeResult(out);
-        
-      } catch(err : any) {
-        setError(err);
-      }
-     })();   
+    appendFileSync('debug_app.log', 'in useEffect of testcase walker');
+    for (const tc of testCases) {
+      appendFileSync('debug_app.log', 'setting testcase');
+      setCurrentTest(tc);
 
-  }, [config]);
+      (async() => {
+        try { 
+          const out : string = await runClaude(tc.prompt);
+          setClaudeResult(out);
+          
+        } catch(err : any) {
+          setError(err);
+        }
+      })();
+    }
+
+  }, [testCases]);
 
 
    if (error) {
@@ -100,7 +109,7 @@ export default function App() {
  
 
 
-  return renderOverallState(config, tests);
+  return renderOverallState(config, testCases, currentTest, claudeResult);
 
 
 };

@@ -7,7 +7,7 @@ type TestCaseProvider = 'filesystem' | 's3' | 'git';
 export type Config = {
 	testcases: {
 		source: TestCaseProvider;
-		locator: string;
+		url: string;
 	};
 };
 

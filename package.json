@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "npm run build --workspace @bitmcp_eval/common && npm run build --workspace @bitmcp_eval/ink-cli",
+    "clean": "npm run clean --workspace @bitmcp_eval/common && npm run clean --workspace @bitmcp_eval/ink-cli",
+    
     "test": "echo \"Error: no test specified\" && exit 1",
     "start-tui": "npm run start-dev --workspace @bitmcp_eval/ink-cli"
   },
