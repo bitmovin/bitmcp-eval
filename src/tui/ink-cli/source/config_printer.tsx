@@ -16,6 +16,21 @@ export default function ConfigPrinter( {config} : Props) {
                 <Spacer />
                 <Text dimColor>({config.testcases.source})</Text>
             </Box>
+            <Box>
+                <Text bold>Headers: </Text>
+                    <Box flexDirection='column'>
+                        
+                        {config.mcp_headers 
+                        
+                            .map(h => (
+                                <Text color="yellowBright" dimColor>
+                                ${h.key}
+                                </Text>
+                            ))
+                            }
+                    </Box>
+                    
+            </Box>
         </Box>
     )
 }

@@ -14,6 +14,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function debugLog(msg : string) {
+        appendFileSync('debug_app.log', `\n${msg}`);
+    
+}
+
 export async function loadTestCases(path: string) : Promise<TestCase[]> {
         appendFileSync('debug_app.log', `\npath for testcases: ${path}\n`);
         
@@ -24,6 +29,7 @@ export async function loadTestCases(path: string) : Promise<TestCase[]> {
                 const fullPath = path + "/" + f;
                 const fileContent = readFileSync(expandHome(fullPath), 'utf8');
                 const tc = YAML.parse(fileContent);
+                debugLog(`testprompt: ${tc.prompt}`);
                 testCases.push(tc);
             } catch (err : any) {
                 if (err instanceof Error) {

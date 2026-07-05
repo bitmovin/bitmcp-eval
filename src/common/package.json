@@ -7,6 +7,10 @@
     "rebuild": "npm run clean && num run build"
   },
   "exports" : {
+   "./mcp_recording": {
+      "types": "./dist/mcp_recording_proxy.d.ts",
+      "default" : "./dist/mcp_recording_proxy.js"
+   },
     "./testCases": {
       "types": "./dist/testCase.d.ts",
       "default" : "./dist/testCase.js"

@@ -4,8 +4,23 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-export async function runClaude(prompt : string ) : Promise<string> {
-  const { stdout } = await execFileAsync('claude', ['-p', prompt]);
+export async function runClaude(prompt : string, proxyUrl : string ) : Promise<string> {
+
+  const cfg = {
+    mcpServers: {
+      "mcp-under-test": { type: "http", url: proxyUrl }, // proxyUrl from proxy.start()
+    },
+  };
+
+  const { stdout } = await execFileAsync('claude', 
+    [
+      '-p', prompt, 
+      "--strict-mcp-config",
+      "--mcp-config", JSON.stringify(cfg),
+      "--allowedTools", "mcp__mcp-under-test__*",
+      "--permission-mode", "acceptEdits",
+      "--output-format", "stream-json", "--verbose",
+    ]);
   return stdout;
 
 };

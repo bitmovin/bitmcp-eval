@@ -9,6 +9,11 @@ export type Config = {
 		source: TestCaseProvider;
 		url: string;
 	};
+    mcp_headers: {
+          key : string; 
+          value: string;
+    }[];
+
 };
 
 export function loadConfig(path: string) : Config {
