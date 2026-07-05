@@ -23,6 +23,21 @@ llm agents.
   * S3
   * git repository
 
+## How does it work? 
+
+A proxy-server is started which intercepts calls from the chat-agents towards the mcp-server under test on 
+transport-layer level. 
+We support for now HTTP-Streaming, but local stdin/stdout is planned for the future. 
+
+This allows us to interact with any mcp server as long as it adheres to the mcp protocol standard. 
+
+The proxy-server intercepts any call towards the mcp server and can therefore easily inspect
+* incoming arguments
+* which calls are invoked
+* response of the mcp server
+
+
+
 
 
 
