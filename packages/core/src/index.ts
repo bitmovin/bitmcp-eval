@@ -5,14 +5,16 @@ export {
   createAgent,
   parseClaudeJsonOutput,
   type Agent,
-  type AgentRunOptions,
-  type AgentRunResult,
+  type AgentSession,
+  type AgentSessionOptions,
+  type AgentTurnResult,
 } from './agent.js';
 export { loadConfig, loadEnvFile, interpolateEnv, type EvalConfig, type McpHeader } from './config.js';
 export { McpRecordingProxy, type ProxyOptions, type ToolCallRecord, type InjectionHeader } from './proxy.js';
 export { writeHtmlReport, renderHtmlReport } from './report.js';
 export {
   EvalRunner,
+  type ConversationTurn,
   type EvalRunnerOptions,
   type EvalRunReport,
   type IterationResult,

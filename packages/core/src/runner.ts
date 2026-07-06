@@ -4,12 +4,22 @@ import { McpRecordingProxy, type ToolCallRecord } from './proxy.js';
 import type { TestCase } from './testcase.js';
 import { validateToolCalls, type ValidationResult } from './validate.js';
 
+/** One user → agent exchange within an iteration's conversation. */
+export interface ConversationTurn {
+  /** What the harness sent: the test case prompt, or one of its `answers`. */
+  message: string;
+  /** The agent's reply for this turn. */
+  response?: string;
+}
+
 export interface IterationResult {
   /** 1-based iteration number. */
   iteration: number;
   passed: boolean;
   validation: ValidationResult;
   toolCalls: ToolCallRecord[];
+  /** The full conversation: initial prompt plus any scripted answers that were needed. */
+  turns: ConversationTurn[];
   /** The agent's final answer, when it produced one. */
   agentResponse?: string;
   /** Set when the agent invocation itself failed (crash, timeout, agent-side error). */
@@ -119,6 +129,11 @@ export class EvalRunner {
     };
   }
 
+  /**
+   * Runs one iteration as a conversation: the prompt first, then — while the
+   * tool expectations are unmet and scripted `answers` remain — one answer per
+   * extra turn, so the agent can get past clarifying questions it asks.
+   */
   private async runIteration(
     testCase: TestCase,
     iteration: number,
@@ -129,32 +144,47 @@ export class EvalRunner {
     const { config } = this.opts;
     const started = performance.now();
 
-    let agentResponse: string | undefined;
+    const session = agent.createSession(proxyUrl, { timeoutMs: config.run.timeoutSeconds * 1000 });
+    const turns: ConversationTurn[] = [];
     let error: string | undefined;
-    try {
-      const result = await agent.run(testCase.prompt, proxyUrl, {
-        timeoutMs: config.run.timeoutSeconds * 1000,
-      });
-      agentResponse = result.text;
-      if (result.isError) {
-        error = `Agent reported an error result: ${result.text}`;
+
+    const sendTurn = async (message: string): Promise<void> => {
+      const turn: ConversationTurn = { message };
+      turns.push(turn);
+      try {
+        const result = await session.send(message);
+        turn.response = result.text;
+        if (result.isError) {
+          error = `Agent reported an error result: ${result.text}`;
+        }
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
       }
-    } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+    };
+
+    const validate = (): ValidationResult =>
+      validateToolCalls(
+        testCase.expectedTools,
+        proxy.getRecords().map((c) => c.name),
+      );
+
+    await sendTurn(testCase.prompt);
+    let validation = validate();
+
+    for (const answer of testCase.answers) {
+      if (error !== undefined || validation.passed) break;
+      await sendTurn(answer);
+      validation = validate();
     }
 
     const toolCalls = [...proxy.getRecords()];
-    const validation = validateToolCalls(
-      testCase.expectedTools,
-      toolCalls.map((c) => c.name),
-    );
-
     return {
       iteration,
       passed: validation.passed && error === undefined,
       validation,
       toolCalls,
-      agentResponse,
+      turns,
+      agentResponse: turns[turns.length - 1]?.response,
       error,
       durationMs: performance.now() - started,
     };

@@ -84,6 +84,27 @@ expectedTools:
 - Extra calls of expected tools are fine. Calls of unlisted tools are reported in the
   HTML report but don't fail the iteration — agents legitimately explore.
 
+**Answering clarifying questions (`answers`)**
+
+Well-designed MCP servers often instruct the agent to ask the user before acting
+("which license should I query?"). In a headless eval that question would end the
+conversation and the test would fail even though the server behaves correctly. Give the
+test case scripted replies:
+
+```yaml
+prompt: 'Show me the ad completion funnel for last week.'
+expectedTools:
+  - peekAllLicenses
+  - query
+answers:
+  - 'Use the license with the highest play volume, no need to ask me again.'
+```
+
+After each agent turn the harness checks the expectations; while they are unmet and
+answers remain, it sends the next answer **into the same agent session** (full
+conversation context) and re-validates. Answers that aren't needed are never sent. The
+HTML report shows the complete conversation for multi-turn iterations.
+
 ### 2. Write a config
 
 ```yaml
@@ -176,6 +197,7 @@ before opening a PR (CI enforces all three).
 - More agents: codex exec, local models behind OpenCode/PI-style harnesses
 - stdio transport for local MCP servers
 - Argument-level expectations (`expectedArguments`) and response-tone checks
+- LLM-judged answer selection (pick the fitting reply instead of a fixed sequence)
 
 ## License
 

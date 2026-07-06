@@ -15,6 +15,7 @@ function sampleReport(): EvalRunReport {
           name: 'weather <script>alert(1)</script>',
           prompt: 'What is the weather in Vienna?',
           expectedTools: ['get_current_weather'],
+          answers: [],
           file: '/tmp/cases/weather.yaml',
         },
         iterations: [
@@ -36,6 +37,7 @@ function sampleReport(): EvalRunReport {
                 durationMs: 42,
               },
             ],
+            turns: [{ message: 'What is the weather in Vienna?', response: 'It is sunny.' }],
             agentResponse: 'It is sunny.',
             durationMs: 9000,
           },
@@ -48,6 +50,10 @@ function sampleReport(): EvalRunReport {
               unexpectedTools: ['list_supported_cities'],
             },
             toolCalls: [],
+            turns: [
+              { message: 'What is the weather in Vienna?', response: 'Which city do you mean exactly?' },
+              { message: 'Vienna, Austria', response: 'I could not find out.' },
+            ],
             agentResponse: 'I could not find out.',
             durationMs: 4000,
           },
@@ -73,6 +79,13 @@ describe('renderHtmlReport', () => {
   it('shows missing tool expectations with counts', () => {
     const html = renderHtmlReport(sampleReport());
     expect(html).toContain('(0/1)');
+  });
+
+  it('renders the full conversation for multi-turn iterations', () => {
+    const html = renderHtmlReport(sampleReport());
+    expect(html).toContain('Conversation (2 turns)');
+    expect(html).toContain('Which city do you mean exactly?');
+    expect(html).toContain('Vienna, Austria');
   });
 });
 

@@ -13,12 +13,20 @@ const testCaseFileSchema = z.object({
    * "expect at least N calls" of that tool within one iteration.
    */
   expectedTools: z.array(z.string().min(1)),
+  /**
+   * Scripted user replies for when the agent ends a turn without having
+   * satisfied the expectations — typically because it asked a clarifying
+   * question. The harness sends them in order, one per extra turn, until the
+   * expectations are met or the list is exhausted.
+   */
+  answers: z.array(z.string().min(1)).default([]),
 });
 
 export interface TestCase {
   name: string;
   prompt: string;
   expectedTools: string[];
+  answers: string[];
   /** Absolute path of the file this test case was loaded from. */
   file: string;
 }
@@ -61,6 +69,7 @@ export async function loadTestCases(dir: string): Promise<TestCase[]> {
       name: parsed.data.name ?? basename(f, extname(f)),
       prompt: parsed.data.prompt,
       expectedTools: parsed.data.expectedTools,
+      answers: parsed.data.answers,
       file,
     });
   }

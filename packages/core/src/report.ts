@@ -129,7 +129,13 @@ function renderIteration(it: IterationResult): string {
         .join('')}</details>`,
     );
   }
-  if (it.agentResponse) {
+  if (it.turns.length > 1) {
+    details.push(
+      `<details><summary>Conversation (${it.turns.length} turns)</summary>${it.turns
+        .map((t) => `<pre><b>user:</b> ${esc(t.message)}\n\n<b>agent:</b> ${esc(t.response ?? '(no response)')}</pre>`)
+        .join('')}</details>`,
+    );
+  } else if (it.agentResponse) {
     details.push(`<details><summary>Agent response</summary><pre>${esc(it.agentResponse)}</pre></details>`);
   }
 

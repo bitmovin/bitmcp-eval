@@ -6,44 +6,67 @@ const execFileAsync = promisify(execFile);
 /** The MCP server alias the agent sees; tool names arrive as `mcp__<alias>__<tool>`. */
 export const MCP_SERVER_ALIAS = 'mcp-under-test';
 
-export interface AgentRunOptions {
-  /** Hard timeout for the agent invocation, in milliseconds. */
+export interface AgentSessionOptions {
+  /** Hard timeout per turn, in milliseconds. */
   timeoutMs?: number;
 }
 
-export interface AgentRunResult {
-  /** The agent's final textual answer. */
+export interface AgentTurnResult {
+  /** The agent's textual answer for this turn. */
   text: string;
   /** True when the agent itself reported an error result. */
   isError: boolean;
 }
 
-/** A chat agent that executes one prompt against the MCP server behind `mcpUrl`. */
+/**
+ * One conversation with the agent. The first `send` starts it; further calls
+ * continue it with full context, so the harness can answer clarifying
+ * questions the agent asks.
+ */
+export interface AgentSession {
+  send(message: string): Promise<AgentTurnResult>;
+}
+
+/** A chat agent that converses against the MCP server behind `mcpUrl`. */
 export interface Agent {
   readonly name: string;
-  run(prompt: string, mcpUrl: string, options?: AgentRunOptions): Promise<AgentRunResult>;
+  createSession(mcpUrl: string, options?: AgentSessionOptions): AgentSession;
 }
 
 /**
- * Runs prompts through the Claude Code CLI (`claude -p`).
+ * Runs conversations through the Claude Code CLI.
  *
- * The proxy URL is injected as the only MCP server (`--strict-mcp-config`),
- * and only tools of that server are auto-allowed, so the agent can call the
- * server under test without any interactive permission prompts.
+ * Each turn is one headless `claude -p` invocation; follow-up turns resume the
+ * same session via `--resume <session-id>`. The proxy URL is injected as the
+ * only MCP server (`--strict-mcp-config`), and only tools of that server are
+ * auto-allowed, so no interactive permission prompts occur.
  */
 export class ClaudeCodeAgent implements Agent {
   readonly name = 'claude';
 
-  async run(prompt: string, mcpUrl: string, options?: AgentRunOptions): Promise<AgentRunResult> {
+  createSession(mcpUrl: string, options?: AgentSessionOptions): AgentSession {
+    return new ClaudeCodeSession(mcpUrl, options);
+  }
+}
+
+class ClaudeCodeSession implements AgentSession {
+  private sessionId?: string;
+
+  constructor(
+    private readonly mcpUrl: string,
+    private readonly options?: AgentSessionOptions,
+  ) {}
+
+  async send(message: string): Promise<AgentTurnResult> {
     const mcpConfig = {
       mcpServers: {
-        [MCP_SERVER_ALIAS]: { type: 'http', url: mcpUrl },
+        [MCP_SERVER_ALIAS]: { type: 'http', url: this.mcpUrl },
       },
     };
 
     const args = [
       '-p',
-      prompt,
+      message,
       '--strict-mcp-config',
       '--mcp-config',
       JSON.stringify(mcpConfig),
@@ -52,18 +75,23 @@ export class ClaudeCodeAgent implements Agent {
       '--output-format',
       'json',
     ];
+    if (this.sessionId !== undefined) {
+      args.push('--resume', this.sessionId);
+    }
 
     let stdout: string;
     try {
       ({ stdout } = await execFileAsync('claude', args, {
-        timeout: options?.timeoutMs,
+        timeout: this.options?.timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
       }));
     } catch (err) {
-      throw new AgentInvocationError(this.name, err);
+      throw new AgentInvocationError('claude', err);
     }
 
-    return parseClaudeJsonOutput(stdout);
+    const parsed = parseClaudeJsonOutput(stdout);
+    this.sessionId = parsed.sessionId ?? this.sessionId;
+    return { text: parsed.text, isError: parsed.isError };
   }
 }
 
@@ -81,12 +109,16 @@ export class AgentInvocationError extends Error {
   }
 }
 
-/** Parses `claude --output-format json` output into the final result text. */
-export function parseClaudeJsonOutput(stdout: string): AgentRunResult {
+/** Parses `claude --output-format json` output into result text + session id. */
+export function parseClaudeJsonOutput(stdout: string): AgentTurnResult & { sessionId?: string } {
   try {
     const parsed = JSON.parse(stdout);
     if (parsed && typeof parsed === 'object' && typeof parsed.result === 'string') {
-      return { text: parsed.result, isError: parsed.is_error === true };
+      return {
+        text: parsed.result,
+        isError: parsed.is_error === true,
+        sessionId: typeof parsed.session_id === 'string' ? parsed.session_id : undefined,
+      };
     }
   } catch {
     /* fall through to raw output */

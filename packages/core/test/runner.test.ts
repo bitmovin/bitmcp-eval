@@ -26,25 +26,29 @@ function startUpstream(): Promise<{ url: string; close(): Promise<void> }> {
   });
 }
 
-/** A scripted agent: per prompt, performs the given tool calls through the proxy. */
+/** A scripted agent: per message, performs the given tool calls through the proxy. */
 function scriptedAgent(script: Record<string, string[]>): Agent {
   let requestId = 0;
   return {
     name: 'scripted',
-    async run(prompt, mcpUrl) {
-      for (const tool of script[prompt] ?? []) {
-        await fetch(mcpUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: ++requestId,
-            method: 'tools/call',
-            params: { name: tool, arguments: {} },
-          }),
-        });
-      }
-      return { text: `answered: ${prompt}`, isError: false };
+    createSession(mcpUrl) {
+      return {
+        async send(message) {
+          for (const tool of script[message] ?? []) {
+            await fetch(mcpUrl, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: ++requestId,
+                method: 'tools/call',
+                params: { name: tool, arguments: {} },
+              }),
+            });
+          }
+          return { text: `answered: ${message}`, isError: false };
+        },
+      };
     },
   };
 }
@@ -59,8 +63,8 @@ function makeConfig(mcpUrl: string, iterations: number): EvalConfig {
 }
 
 const CASES: TestCase[] = [
-  { name: 'passing', prompt: 'p1', expectedTools: ['query'], file: '/t/p1.yaml' },
-  { name: 'failing', prompt: 'p2', expectedTools: ['query', 'queryTotal'], file: '/t/p2.yaml' },
+  { name: 'passing', prompt: 'p1', expectedTools: ['query'], answers: [], file: '/t/p1.yaml' },
+  { name: 'failing', prompt: 'p2', expectedTools: ['query', 'queryTotal'], answers: [], file: '/t/p2.yaml' },
 ];
 
 describe('EvalRunner', () => {
@@ -125,10 +129,14 @@ describe('EvalRunner', () => {
     let calls = 0;
     const flakyAgent: Agent = {
       name: 'flaky',
-      async run() {
-        calls++;
-        if (calls === 1) throw new Error('agent exploded');
-        return { text: 'ok but called nothing', isError: false };
+      createSession() {
+        return {
+          async send() {
+            calls++;
+            if (calls === 1) throw new Error('agent exploded');
+            return { text: 'ok but called nothing', isError: false };
+          },
+        };
       },
     };
 
@@ -143,5 +151,72 @@ describe('EvalRunner', () => {
     expect(report.results[0].iterations[0].error).toContain('agent exploded');
     expect(report.results[0].iterations[1].error).toBeUndefined();
     expect(report.results[0].iterations[1].passed).toBe(false); // expected tool not called
+  });
+
+  it('answers clarifying questions with the scripted answers until expectations are met', async () => {
+    const upstream = await startUpstream();
+    cleanups.push(upstream.close);
+
+    // Turn 1 only lists licenses and asks back; the scripted answer unlocks the real queries.
+    const agent = scriptedAgent({
+      'show me the funnel': ['peekAllLicenses'],
+      'use the license with the most plays': ['query', 'query'],
+    });
+
+    const testCase: TestCase = {
+      name: 'clarifying question',
+      prompt: 'show me the funnel',
+      expectedTools: ['peekAllLicenses', 'query', 'query'],
+      answers: ['use the license with the most plays', 'never needed'],
+      file: '/t/funnel.yaml',
+    };
+
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const report = await runner.run();
+    const iteration = report.results[0].iterations[0];
+
+    expect(iteration.passed).toBe(true);
+    // Only the first answer was needed; the second was never sent.
+    expect(iteration.turns.map((t) => t.message)).toEqual([
+      'show me the funnel',
+      'use the license with the most plays',
+    ]);
+    expect(iteration.toolCalls.map((c) => c.name)).toEqual(['peekAllLicenses', 'query', 'query']);
+  });
+
+  it('does not send answers when the first turn already satisfies the expectations', async () => {
+    const upstream = await startUpstream();
+    cleanups.push(upstream.close);
+
+    const agent = scriptedAgent({ p1: ['query'] });
+    const testCase: TestCase = { ...CASES[0], answers: ['should never be sent'] };
+
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const report = await runner.run();
+    const iteration = report.results[0].iterations[0];
+
+    expect(iteration.passed).toBe(true);
+    expect(iteration.turns).toHaveLength(1);
+  });
+
+  it('fails when the answers run out before the expectations are met', async () => {
+    const upstream = await startUpstream();
+    cleanups.push(upstream.close);
+
+    const agent = scriptedAgent({ p2: ['query'], 'answer 1': [] });
+    const testCase: TestCase = { ...CASES[1], answers: ['answer 1'] };
+
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const report = await runner.run();
+    const iteration = report.results[0].iterations[0];
+
+    expect(iteration.passed).toBe(false);
+    expect(iteration.turns).toHaveLength(2);
+    expect(iteration.validation.expectations).toContainEqual({
+      name: 'queryTotal',
+      expected: 1,
+      actual: 0,
+      satisfied: false,
+    });
   });
 });
