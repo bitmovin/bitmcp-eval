@@ -59,6 +59,7 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
   .tool { background: #eef2ff; border-radius: 4px; padding: 0 .4rem; font-size: .75rem; font-family: ui-monospace, monospace; }
   .tool.missing { background: #fee2e2; text-decoration: line-through; }
   .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: .6rem 1rem; margin: 1rem 0; font-size: .9rem; }
+  .banner.aborted { background: #fee2e2; border-color: #b91c1c; }
 </style>
 </head>
 <body>
@@ -75,6 +76,11 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
       ? `<div class="banner">&#9203; <b>Run in progress</b> — ${report.totals.testCases} of ${report.plannedTestCases} test cases finished. This page refreshes automatically every 10&nbsp;seconds.</div>`
       : ''
   }
+  ${
+    report.status === 'aborted'
+      ? `<div class="banner aborted">&#9888; <b>Run aborted</b> — only ${report.totals.testCases} of ${report.plannedTestCases} test cases were finished before the run was cancelled.</div>`
+      : ''
+  }
 
   <div class="summary">
     <div class="stat"><div class="value">${totals.testCases}</div><div class="label">Test cases</div></div>
@@ -84,14 +90,43 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
     <div class="stat"><div class="value">${Math.round(passRate * 100)}%</div><div class="label">Pass rate</div></div>
   </div>
 
-  ${report.results.map(renderTestCase).join('\n')}
+  ${report.results.map((result, index) => renderTestCase(result, index)).join('\n')}
 </main>
+${detailsStateScript(report.startedAt)}
 </body>
 </html>
 `;
 }
 
-function renderTestCase(result: TestCaseResult): string {
+/**
+ * The live report reloads itself every 10 s, which would collapse any open
+ * <details> section. This script remembers open sections in localStorage
+ * (keyed per run) and restores them after each reload.
+ */
+function detailsStateScript(startedAt: string): string {
+  return `<script>
+(function () {
+  var KEY = 'bitmcp-eval-details-' + ${JSON.stringify(startedAt)};
+  var open;
+  try { open = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { open = []; }
+  var all = document.querySelectorAll('details[data-key]');
+  for (var i = 0; i < all.length; i++) {
+    if (open.indexOf(all[i].getAttribute('data-key')) !== -1) all[i].open = true;
+  }
+  document.addEventListener('toggle', function (e) {
+    var el = e.target;
+    if (!el || el.tagName !== 'DETAILS' || !el.getAttribute('data-key')) return;
+    var key = el.getAttribute('data-key');
+    var idx = open.indexOf(key);
+    if (el.open && idx === -1) open.push(key);
+    if (!el.open && idx !== -1) open.splice(idx, 1);
+    try { localStorage.setItem(KEY, JSON.stringify(open)); } catch (e2) { /* ignore */ }
+  }, true);
+})();
+</script>`;
+}
+
+function renderTestCase(result: TestCaseResult, index: number): string {
   const allPassed = result.iterations.every((it) => it.passed);
   return `<section class="card">
   <header>
@@ -106,13 +141,13 @@ function renderTestCase(result: TestCaseResult): string {
   <table>
     <thead><tr><th>#</th><th>Result</th><th>Tool calls</th><th>Duration</th><th>Details</th></tr></thead>
     <tbody>
-      ${result.iterations.map(renderIteration).join('\n')}
+      ${result.iterations.map((it) => renderIteration(it, `${index}-${it.iteration}`)).join('\n')}
     </tbody>
   </table>
 </section>`;
 }
 
-function renderIteration(it: IterationResult): string {
+function renderIteration(it: IterationResult, key: string): string {
   const badge = it.passed ? '<span class="badge pass">passed</span>' : '<span class="badge fail">failed</span>';
 
   const calls = it.toolCalls.length
@@ -126,10 +161,13 @@ function renderIteration(it: IterationResult): string {
 
   const details: string[] = [];
   if (missing) details.push(`<div class="tools">missing:&nbsp;${missing}</div>`);
-  if (it.error) details.push(`<details><summary class="fail">Error</summary><pre>${esc(it.error)}</pre></details>`);
+  if (it.error)
+    details.push(
+      `<details data-key="${key}-error"><summary class="fail">Error</summary><pre>${esc(it.error)}</pre></details>`,
+    );
   if (it.toolCalls.length) {
     details.push(
-      `<details><summary>Recorded calls (${it.toolCalls.length})</summary>${it.toolCalls
+      `<details data-key="${key}-calls"><summary>Recorded calls (${it.toolCalls.length})</summary>${it.toolCalls
         .map(
           (c) =>
             `<pre><b>${esc(c.name)}</b> (${c.ok ? 'ok' : 'error'}, ${Math.round(c.durationMs)} ms)\n${esc(
@@ -141,12 +179,14 @@ function renderIteration(it: IterationResult): string {
   }
   if (it.turns.length > 1) {
     details.push(
-      `<details><summary>Conversation (${it.turns.length} turns)</summary>${it.turns
+      `<details data-key="${key}-conv"><summary>Conversation (${it.turns.length} turns)</summary>${it.turns
         .map((t) => `<pre><b>user:</b> ${esc(t.message)}\n\n<b>agent:</b> ${esc(t.response ?? '(no response)')}</pre>`)
         .join('')}</details>`,
     );
   } else if (it.agentResponse) {
-    details.push(`<details><summary>Agent response</summary><pre>${esc(it.agentResponse)}</pre></details>`);
+    details.push(
+      `<details data-key="${key}-resp"><summary>Agent response</summary><pre>${esc(it.agentResponse)}</pre></details>`,
+    );
   }
 
   return `<tr>

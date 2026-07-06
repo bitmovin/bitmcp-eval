@@ -47,6 +47,22 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
   const started = useRef(false);
   // Report writes go to the same file; chain them so snapshots never interleave.
   const reportWrites = useRef<Promise<unknown>>(Promise.resolve());
+  const lastSnapshot = useRef<{ snapshot: EvalRunReport; outDir: string } | null>(null);
+
+  // Ctrl-C: freeze the live report as "aborted" (stops its auto-refresh) before exiting.
+  useEffect(() => {
+    const onSigint = () => {
+      const last = lastSnapshot.current;
+      if (!last) process.exit(130);
+      writeHtmlReport({ ...last.snapshot, status: 'aborted' }, last.outDir)
+        .catch(() => undefined)
+        .finally(() => process.exit(130));
+    };
+    process.on('SIGINT', onSigint);
+    return () => {
+      process.off('SIGINT', onSigint);
+    };
+  }, []);
 
   useEffect(() => {
     if (started.current) return; // guard against double-mount in dev/StrictMode
@@ -90,6 +106,7 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
             setCurrent(null); // its iterations are now counted via `completed`
           },
           onReportUpdate: (snapshot) => {
+            lastSnapshot.current = { snapshot, outDir: cfg.report.outDir };
             reportWrites.current = reportWrites.current
               .then(() => writeHtmlReport(snapshot, cfg.report.outDir))
               .then((path) => setLiveReportPath(path))
@@ -99,6 +116,7 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
       });
 
       const runReport = await runner.run();
+      lastSnapshot.current = null; // run finished; Ctrl-C no longer needs an abort write
       await reportWrites.current; // let the last live snapshot land before the final write
       const htmlPath = await writeHtmlReport(runReport, cfg.report.outDir);
       setCurrent(null);

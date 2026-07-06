@@ -74,8 +74,12 @@ describe('renderHtmlReport', () => {
     expect(html).toContain('50%'); // pass rate
     expect(html).toContain('What is the weather in Vienna?');
     expect(html).toContain('get_current_weather');
-    expect(html).not.toMatch(/<script/); // no scripts at all — static and XSS-safe
-    expect(html).toContain('&lt;script&gt;'); // the malicious name is escaped
+    // XSS-safe: the only script is our own details-state helper; the malicious
+    // test case name arrives escaped, never as markup.
+    expect(html.match(/<script>/g)).toHaveLength(1);
+    expect(html).toContain("var KEY = 'bitmcp-eval-details-'");
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).not.toContain('<script>alert');
   });
 
   it('shows missing tool expectations with counts', () => {
@@ -101,7 +105,23 @@ describe('renderHtmlReport', () => {
   it('completed reports have no banner and no auto-refresh', () => {
     const html = renderHtmlReport(sampleReport());
     expect(html).not.toContain('Run in progress');
+    expect(html).not.toContain('Run aborted');
     expect(html).not.toContain('http-equiv="refresh"');
+  });
+
+  it('aborted reports show an abort banner and stop refreshing', () => {
+    const aborted = { ...sampleReport(), status: 'aborted' as const, plannedTestCases: 7 };
+    const html = renderHtmlReport(aborted);
+    expect(html).toContain('Run aborted');
+    expect(html).toContain('1 of 7 test cases were finished');
+    expect(html).not.toContain('http-equiv="refresh"');
+  });
+
+  it('details sections carry stable keys and the state-restore script', () => {
+    const html = renderHtmlReport(sampleReport());
+    expect(html).toContain('data-key="0-1-calls"'); // first test case, iteration 1, recorded calls
+    expect(html).toContain('data-key="0-2-conv"'); // iteration 2, conversation
+    expect(html).toContain('\'bitmcp-eval-details-\' + "2026-07-06T10:00:00.000Z"');
   });
 });
 

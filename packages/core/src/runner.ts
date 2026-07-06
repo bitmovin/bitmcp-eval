@@ -35,8 +35,11 @@ export interface TestCaseResult {
 }
 
 export interface EvalRunReport {
-  /** `running` for the incremental snapshots emitted during the run, `completed` for the final report. */
-  status: 'running' | 'completed';
+  /**
+   * `running` for the incremental snapshots emitted during the run,
+   * `completed` for the final report, `aborted` when the run was cancelled.
+   */
+  status: 'running' | 'completed' | 'aborted';
   startedAt: string;
   /** For running snapshots: the time of the snapshot. */
   finishedAt: string;
