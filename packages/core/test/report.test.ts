@@ -4,11 +4,13 @@ import type { EvalRunReport } from '../src/runner.js';
 
 function sampleReport(): EvalRunReport {
   return {
+    status: 'completed',
     startedAt: '2026-07-06T10:00:00.000Z',
     finishedAt: '2026-07-06T10:05:00.000Z',
     mcpUrl: 'http://127.0.0.1:3210/mcp',
     agent: 'claude',
     iterationsPerTestCase: 2,
+    plannedTestCases: 1,
     results: [
       {
         testCase: {
@@ -86,6 +88,20 @@ describe('renderHtmlReport', () => {
     expect(html).toContain('Conversation (2 turns)');
     expect(html).toContain('Which city do you mean exactly?');
     expect(html).toContain('Vienna, Austria');
+  });
+
+  it('marks running snapshots with a progress banner and auto-refresh', () => {
+    const running = { ...sampleReport(), status: 'running' as const, plannedTestCases: 5 };
+    const html = renderHtmlReport(running);
+    expect(html).toContain('Run in progress');
+    expect(html).toContain('1 of 5 test cases finished');
+    expect(html).toContain('http-equiv="refresh"');
+  });
+
+  it('completed reports have no banner and no auto-refresh', () => {
+    const html = renderHtmlReport(sampleReport());
+    expect(html).not.toContain('Run in progress');
+    expect(html).not.toContain('http-equiv="refresh"');
   });
 });
 

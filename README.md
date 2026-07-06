@@ -140,7 +140,11 @@ yarn start -c eval.yaml -i 10  # override iterations from the CLI
 The process exits non-zero when the run itself fails (bad config, unreachable server).
 Evaluation outcomes — pass rates per test case and iteration — are in the TUI summary
 and the HTML report, which includes each iteration's recorded tool calls with arguments,
-durations, missing expectations, and the agent's final response.
+durations, missing expectations, and the agent's full conversation.
+
+The report is written **incrementally**: after the first finished test case the TUI
+shows a "Live report" link you can open right away — the page carries an in-progress
+banner and auto-refreshes every 10 seconds until the run completes.
 
 ## Configuration reference
 

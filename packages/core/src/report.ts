@@ -20,11 +20,14 @@ export function renderHtmlReport(report: EvalRunReport): string {
   const { totals } = report;
   const passRate = totals.iterations === 0 ? 0 : totals.passedIterations / totals.iterations;
 
+  const running = report.status === 'running';
+
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${running ? '<meta http-equiv="refresh" content="10">' : ''}
 <title>bitmcp-eval report — ${esc(formatDate(report.startedAt))}</title>
 <style>
   :root { color-scheme: light; }
@@ -55,6 +58,7 @@ export function renderHtmlReport(report: EvalRunReport): string {
   .tools { display: flex; gap: .3rem; flex-wrap: wrap; }
   .tool { background: #eef2ff; border-radius: 4px; padding: 0 .4rem; font-size: .75rem; font-family: ui-monospace, monospace; }
   .tool.missing { background: #fee2e2; text-decoration: line-through; }
+  .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: .6rem 1rem; margin: 1rem 0; font-size: .9rem; }
 </style>
 </head>
 <body>
@@ -65,6 +69,12 @@ export function renderHtmlReport(report: EvalRunReport): string {
     &middot; MCP server: <code>${esc(report.mcpUrl)}</code>
     &middot; ${report.iterationsPerTestCase} iteration(s) per test case
   </div>
+
+  ${
+    running
+      ? `<div class="banner">&#9203; <b>Run in progress</b> — ${report.totals.testCases} of ${report.plannedTestCases} test cases finished. This page refreshes automatically every 10&nbsp;seconds.</div>`
+      : ''
+  }
 
   <div class="summary">
     <div class="stat"><div class="value">${totals.testCases}</div><div class="label">Test cases</div></div>

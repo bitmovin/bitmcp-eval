@@ -94,6 +94,8 @@ describe('EvalRunner', () => {
 
     const report = await runner.run();
 
+    expect(report.status).toBe('completed');
+    expect(report.plannedTestCases).toBe(2);
     expect(report.totals).toEqual({ testCases: 2, iterations: 4, passedIterations: 2, failedIterations: 2 });
     expect(report.results[0].passRate).toBe(1);
     expect(report.results[1].passRate).toBe(0);
@@ -218,5 +220,29 @@ describe('EvalRunner', () => {
       actual: 0,
       satisfied: false,
     });
+  });
+
+  it('emits a running report snapshot after every finished test case', async () => {
+    const upstream = await startUpstream();
+    cleanups.push(upstream.close);
+
+    const snapshots: Array<{ status: string; done: number; planned: number }> = [];
+    const runner = new EvalRunner({
+      config: makeConfig(upstream.url, 1),
+      testCases: CASES,
+      agent: scriptedAgent({ p1: ['query'], p2: ['query'] }),
+      events: {
+        onReportUpdate: (r) =>
+          snapshots.push({ status: r.status, done: r.totals.testCases, planned: r.plannedTestCases }),
+      },
+    });
+
+    const finalReport = await runner.run();
+
+    expect(snapshots).toEqual([
+      { status: 'running', done: 1, planned: 2 },
+      { status: 'running', done: 2, planned: 2 },
+    ]);
+    expect(finalReport.status).toBe('completed');
   });
 });

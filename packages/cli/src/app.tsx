@@ -43,7 +43,10 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
   const [current, setCurrent] = useState<CurrentIteration | null>(null);
   const [completed, setCompleted] = useState<TestCaseResult[]>([]);
   const [report, setReport] = useState<{ report: EvalRunReport; htmlPath: string } | null>(null);
+  const [liveReportPath, setLiveReportPath] = useState<string | null>(null);
   const started = useRef(false);
+  // Report writes go to the same file; chain them so snapshots never interleave.
+  const reportWrites = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     if (started.current) return; // guard against double-mount in dev/StrictMode
@@ -86,10 +89,17 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
             setCompleted((prev) => [...prev, result]);
             setCurrent(null); // its iterations are now counted via `completed`
           },
+          onReportUpdate: (snapshot) => {
+            reportWrites.current = reportWrites.current
+              .then(() => writeHtmlReport(snapshot, cfg.report.outDir))
+              .then((path) => setLiveReportPath(path))
+              .catch(() => undefined); // a failed snapshot write never kills the run
+          },
         },
       });
 
       const runReport = await runner.run();
+      await reportWrites.current; // let the last live snapshot land before the final write
       const htmlPath = await writeHtmlReport(runReport, cfg.report.outDir);
       setCurrent(null);
       setReport({ report: runReport, htmlPath });
@@ -149,6 +159,12 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
               {iterationsDone}/{iterationsTotal} iterations
             </Text>
           </Box>
+          {liveReportPath && (
+            <Text>
+              Live report: <Text color="blue">file://{liveReportPath}</Text>{' '}
+              <Text dimColor>(updates per test case)</Text>
+            </Text>
+          )}
           {current && (
             <Box flexDirection="column" marginTop={1}>
               <Text>

@@ -35,11 +35,17 @@ export interface TestCaseResult {
 }
 
 export interface EvalRunReport {
+  /** `running` for the incremental snapshots emitted during the run, `completed` for the final report. */
+  status: 'running' | 'completed';
   startedAt: string;
+  /** For running snapshots: the time of the snapshot. */
   finishedAt: string;
   mcpUrl: string;
   agent: string;
   iterationsPerTestCase: number;
+  /** How many test cases the run will execute in total. */
+  plannedTestCases: number;
+  /** Results of the test cases finished so far (all of them, once completed). */
   results: TestCaseResult[];
   totals: {
     testCases: number;
@@ -57,6 +63,11 @@ export interface RunnerEvents {
   onToolCall?(record: ToolCallRecord): void;
   onIterationEnd?(testCase: TestCase, result: IterationResult): void;
   onTestCaseEnd?(result: TestCaseResult): void;
+  /**
+   * Fired after every finished test case with a `running` snapshot covering
+   * all results so far — write it out to get a live, incrementally updated report.
+   */
+  onReportUpdate?(report: EvalRunReport): void;
 }
 
 export interface EvalRunnerOptions {
@@ -107,19 +118,33 @@ export class EvalRunner {
         };
         results.push(result);
         events?.onTestCaseEnd?.(result);
+        events?.onReportUpdate?.(this.buildReport('running', startedAt, results, testCases.length));
       }
     } finally {
       await proxy.stop();
     }
 
+    return this.buildReport('completed', startedAt, results, testCases.length);
+  }
+
+  private buildReport(
+    status: EvalRunReport['status'],
+    startedAt: Date,
+    results: TestCaseResult[],
+    plannedTestCases: number,
+  ): EvalRunReport {
+    const { config, agent } = this.opts;
     const allIterations = results.flatMap((r) => r.iterations);
     return {
+      status,
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
       mcpUrl: config.mcp.url,
       agent: agent.name,
       iterationsPerTestCase: config.run.iterations,
-      results,
+      plannedTestCases,
+      // shallow copy so later mutation never leaks into an already-emitted snapshot
+      results: [...results],
       totals: {
         testCases: results.length,
         iterations: allIterations.length,
