@@ -1,0 +1,23 @@
+# Example bitmcp-eval configuration, wired to the demo weather MCP server.
+#
+#   1. yarn demo-server                     # starts the MCP server on :3210
+#   2. yarn start -c examples/eval.yaml     # runs the evaluation
+mcp:
+  url: http://127.0.0.1:3210/mcp
+  # Headers are injected into every request towards the MCP server.
+  # Use ${VAR} to pull secrets from the environment instead of the config file:
+  # headers:
+  #   - name: x-api-key
+  #     value: ${MY_MCP_API_KEY}
+
+testcases:
+  source: filesystem
+  path: ./testcases # relative to this config file
+
+run:
+  iterations: 2 # execute every test case this often to see the spread in agent behavior
+  agent: claude
+  timeoutSeconds: 300
+
+report:
+  outDir: ../reports # where the static HTML report is written

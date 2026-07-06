@@ -1,0 +1,5 @@
+name: compare two forecasts
+prompt: 'Compare the 3-day temperature forecast of Berlin and London and tell me which city will be warmer on average.'
+expectedTools:
+  - get_forecast
+  - get_forecast

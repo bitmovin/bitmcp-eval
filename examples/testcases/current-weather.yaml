@@ -1,0 +1,4 @@
+name: current weather lookup
+prompt: 'What is the current weather in Vienna? Use the available tools to find out.'
+expectedTools:
+  - get_current_weather

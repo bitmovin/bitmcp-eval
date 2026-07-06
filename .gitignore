@@ -1,6 +1,16 @@
-node_modules
-.swp
-.swo
-.env
+node_modules/
 dist/
+reports/
+.env
+*.log
+*.swp
+*.swo
 
+# Yarn Berry (zero-install disabled)
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
