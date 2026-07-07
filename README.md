@@ -14,10 +14,10 @@ traffic to your MCP server with a recording proxy, and validates the observed to
 against your expectations — multiple times per prompt, because agent behavior has spread.
 
 ```
-┌─────────────┐  prompt  ┌─────────────┐   MCP (StreamableHTTP)   ┌─────────────────┐        ┌────────────────┐
-│ bitmcp-eval │ ───────▶ │ chat agent  │ ───────────────────────▶ │ recording proxy │ ─────▶ │ your MCP       │
-│    (TUI)    │          │ (claude -p) │ ◀─────────────────────── │  tools/call ✓   │ ◀───── │ server         │
-└─────────────┘          └─────────────┘                          └─────────────────┘        └────────────────┘
+┌─────────────┐  prompt  ┌──────────────┐  MCP (StreamableHTTP)   ┌─────────────────┐        ┌────────────────┐
+│ bitmcp-eval │ ───────▶ │  chat agent  │ ──────────────────────▶ │ recording proxy │ ─────▶ │ your MCP       │
+│    (TUI)    │          │ claude/codex │ ◀────────────────────── │  tools/call ✓   │ ◀───── │ server         │
+└─────────────┘          └──────────────┘                         └─────────────────┘        └────────────────┘
        │                                                                   │
        └───────────── validate expected vs. recorded tool calls ◀──────────┘
                       → live TUI results + static HTML report
@@ -25,7 +25,19 @@ against your expectations — multiple times per prompt, because agent behavior 
 
 The proxy operates on the transport layer, so it needs **zero changes to your server**:
 anything that speaks the MCP StreamableHTTP protocol can be put under test — running
-locally or remote, with authentication headers injected transparently.
+locally or remote, with authentication (headers or OAuth) handled transparently.
+
+## Contents
+
+- [Requirements](#requirements)
+- [Quickstart](#quickstart-2-minutes-bundled-demo-server)
+- [Evaluating your own MCP server](#evaluating-your-own-mcp-server) — test cases, config, running
+- [Configuration reference](#configuration-reference)
+- [Choosing the agents](#choosing-the-agents) — claude vs codex
+- [OAuth-protected MCP servers](#oauth-protected-mcp-servers) — the `login` command, token cache
+- [Security & safety](#security--safety)
+- [Architecture](#architecture)
+- [Development](#development) · [Roadmap](#roadmap)
 
 ## Requirements
 
@@ -60,6 +72,11 @@ yarn demo-server
 # terminal 2: run the evaluation against it
 yarn start -c examples/eval.yaml
 ```
+
+> **Running the CLI.** bitmcp-eval isn't published to npm yet, so every command in this
+> README is invoked as **`yarn start …`** from the repo. If you'd rather have a global
+> `bitmcp-eval` command, run `yarn build && yarn link` once inside `packages/cli`; then
+> `bitmcp-eval …` works anywhere. The two forms are interchangeable everywhere below.
 
 You'll watch every test case execute live, and at the end you get a link to a
 self-contained HTML report:
@@ -106,13 +123,14 @@ expectedTools:
 Well-designed MCP servers often instruct the agent to ask the user before acting
 ("which license should I query?"). In a headless eval that question would end the
 conversation and the test would fail even though the server behaves correctly. Give the
-test case scripted replies:
+test case scripted replies (illustrative — these tools belong to an analytics server, not
+the weather demo):
 
 ```yaml
 prompt: 'Show me the ad completion funnel for last week.'
 expectedTools:
   - peekAllLicenses
-  - query
+  - queryTotal
 answers:
   - 'Use the license with the highest play volume, no need to ask me again.'
 ```
@@ -253,7 +271,7 @@ request it forwards.
 You can perform step 2 ahead of time instead of waiting for a run to prompt you:
 
 ```sh
-yarn start login -c eval.yaml     # or, if installed globally: bitmcp-eval login -c eval.yaml
+yarn start login -c eval.yaml     # (or `bitmcp-eval login -c eval.yaml` if you ran yarn link)
 ```
 
 This runs discovery + browser login for the server in that config and caches the token,
@@ -303,7 +321,31 @@ rm -rf ~/.bitmcp-eval/tokens && yarn start login -c eval.yaml
 > Already have a token by other means? OAuth is ultimately just a header — you can bypass
 > all of the above and set `Authorization: Bearer ${TOKEN}` under `mcp.headers` instead.
 
-## How it works
+## Security & safety
+
+The harness runs real agents against real servers with real credentials — a few things to
+know before pointing it at anything sensitive. (Each point is detailed in the section noted.)
+
+- **Only evaluate trusted test cases against trusted MCP servers, or run in a container.**
+  The `codex` agent requires `--dangerously-bypass-approvals-and-sandbox` (headless MCP
+  calls are auto-cancelled otherwise), which un-sandboxes its shell tool. codex cannot be
+  hard-restricted the way `claude` can, so a prompt or server could induce it to run local
+  commands. The `claude` agent is confined to the server under test via
+  `--strict-mcp-config`. See [Choosing the agents](#choosing-the-agents).
+- **`--debug` writes secrets to disk.** The debug log records the full post-injection
+  request headers — API keys and OAuth bearer tokens included. It goes to `report.outDir`;
+  don't commit or share it. See [Run](#3-run).
+- **OAuth tokens are cached in cleartext** under `~/.bitmcp-eval/tokens/` (`0600`). Delete
+  the directory to revoke locally. See [Managing cached tokens](#managing-cached-tokens).
+- **Keep secrets out of configs.** Use `${VAR}` interpolation (backed by `envFile` or the
+  environment) for API keys and client secrets rather than literals in `eval.yaml`, and
+  keep your `.env` untracked.
+- **codex sees your `~/.codex/config.toml`.** It has no isolation flag equivalent to
+  `--strict-mcp-config`, so connectors/servers configured there are reachable during a run;
+  the harness disables web search and ChatGPT apps and flags any off-server tool call as an
+  escape, but a clean codex config gives the cleanest results.
+
+## Architecture
 
 `bitmcp-eval` starts a local reverse proxy in front of your MCP server and generates an
 MCP configuration for the chat agent that points at the proxy. Every JSON-RPC message is
