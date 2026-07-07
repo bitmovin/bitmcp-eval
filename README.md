@@ -30,8 +30,9 @@ locally or remote, with authentication headers injected transparently.
 ## Requirements
 
 - Node.js ≥ 20 with corepack enabled (Yarn Berry)
-- [Claude Code](https://claude.com/claude-code) CLI installed and authenticated (`claude`) —
-  the chat agent that executes the prompts
+- A chat agent CLI, installed and authenticated:
+  - [Claude Code](https://claude.com/claude-code) (`claude`) — the default, or
+  - [OpenAI Codex](https://github.com/openai/codex) (`codex`) — select with `run.agent: codex`
 
 ## Quickstart (2 minutes, bundled demo server)
 
@@ -148,17 +149,45 @@ banner and auto-refreshes every 10 seconds until the run completes.
 
 ## Configuration reference
 
-| Key                  | Type             | Default                           | Description                                                                                          |
-| -------------------- | ---------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `envFile`            | string           | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.         |
-| `mcp.url`            | URL, required    | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                |
-| `mcp.headers[]`      | `{name, value}`  | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated. |
-| `testcases.source`   | `filesystem`     | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                      |
-| `testcases.path`     | string, required | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                    |
-| `run.iterations`     | int 1–100        | `3`                               | Executions per test case, to measure behavioral spread.                                              |
-| `run.agent`          | `claude`         | `claude`                          | Chat agent used to execute prompts. More agents are planned.                                         |
-| `run.timeoutSeconds` | int              | `300`                             | Hard limit per agent invocation.                                                                     |
-| `report.outDir`      | string           | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                   |
+| Key                  | Type                | Default                           | Description                                                                                          |
+| -------------------- | ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `envFile`            | string              | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.         |
+| `mcp.url`            | URL, required       | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                |
+| `mcp.headers[]`      | `{name, value}`     | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated. |
+| `testcases.source`   | `filesystem`        | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                      |
+| `testcases.path`     | string, required    | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                    |
+| `run.iterations`     | int 1–100           | `3`                               | Executions per test case, to measure behavioral spread.                                              |
+| `run.agent`          | `claude` \| `codex` | `claude`                          | Chat agent used to execute prompts. See "Choosing the agent" below.                                  |
+| `run.timeoutSeconds` | int                 | `300`                             | Hard limit per agent invocation.                                                                     |
+| `report.outDir`      | string              | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                   |
+
+## Choosing the agent
+
+The agent is a property of the run (`run.agent` in `eval.yaml`), so the same test cases can
+be evaluated against different agents.
+
+**`claude`** (default) — each turn runs `claude -p … --strict-mcp-config`, so the server
+under test is the agent's _only_ MCP server and only its tools are auto-allowed. Follow-up
+`answers` resume the session via `--resume <session-id>`.
+
+**`codex`** — each turn runs `codex exec --json …` with the proxy injected via a config
+override; follow-up `answers` use `codex exec resume <thread-id>`. The harness disables
+codex's built-in web search (`web_search="disabled"`) and runs each session in a neutral
+temp directory with an `AGENTS.md` steering it to answer only via the server under test.
+Caveats inherent to today's codex CLI:
+
+- `--dangerously-bypass-approvals-and-sandbox` is passed automatically because headless
+  MCP tool calls are otherwise auto-cancelled
+  ([openai/codex#16685](https://github.com/openai/codex/issues/16685),
+  [openai/codex#24135](https://github.com/openai/codex/issues/24135)). This lifts the
+  sandbox for shell commands, and codex's shell tool cannot be switched off by config —
+  the `AGENTS.md` guardrail steers away from it, but that is instruction, not
+  enforcement. **Only evaluate trusted test cases against trusted MCP servers, or run
+  the harness in a container.**
+- codex has no isolation flag equivalent to `--strict-mcp-config` (its
+  `--ignore-user-config` also drops the override that injects the proxy), so MCP servers
+  from your own `~/.codex/config.toml` stay visible to the agent during the eval. Keep the
+  eval machine's codex config clean for unpolluted results.
 
 ## How it works
 
@@ -198,7 +227,7 @@ before opening a PR (CI enforces all three).
 ## Roadmap
 
 - Test case providers: S3, git repository
-- More agents: codex exec, local models behind OpenCode/PI-style harnesses
+- More agents: local models behind OpenCode/PI-style harnesses
 - stdio transport for local MCP servers
 - Argument-level expectations (`expectedArguments`) and response-tone checks
 - LLM-judged answer selection (pick the fitting reply instead of a fixed sequence)

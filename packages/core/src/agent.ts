@@ -1,7 +1,26 @@
 import { execFile } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Creates an empty temp directory to run agent turns in, so the agent never
+ * picks up context files (CLAUDE.md, AGENTS.md, settings) from whatever
+ * directory the eval happens to be started in.
+ */
+export function makeNeutralWorkDir(agentName: string): string {
+  return mkdtempSync(join(tmpdir(), `bitmcp-eval-${agentName}-`));
+}
+
+export function removeNeutralWorkDir(dir: string): void {
+  rmSync(dir, { recursive: true, force: true });
+}
+
+/** The chat agents this harness can drive. */
+export type AgentKind = 'claude' | 'codex';
 
 /** The MCP server alias the agent sees; tool names arrive as `mcp__<alias>__<tool>`. */
 export const MCP_SERVER_ALIAS = 'mcp-under-test';
@@ -25,6 +44,8 @@ export interface AgentTurnResult {
  */
 export interface AgentSession {
   send(message: string): Promise<AgentTurnResult>;
+  /** Optional cleanup of per-session resources (temp dirs etc.). */
+  close?(): void | Promise<void>;
 }
 
 /** A chat agent that converses against the MCP server behind `mcpUrl`. */
@@ -51,11 +72,17 @@ export class ClaudeCodeAgent implements Agent {
 
 class ClaudeCodeSession implements AgentSession {
   private sessionId?: string;
+  /** Neutral cwd so the agent never picks up CLAUDE.md/settings of the directory the eval runs from. */
+  private readonly workDir = makeNeutralWorkDir('claude');
 
   constructor(
     private readonly mcpUrl: string,
     private readonly options?: AgentSessionOptions,
   ) {}
+
+  close(): void {
+    removeNeutralWorkDir(this.workDir);
+  }
 
   async send(message: string): Promise<AgentTurnResult> {
     const mcpConfig = {
@@ -82,6 +109,7 @@ class ClaudeCodeSession implements AgentSession {
     let stdout: string;
     try {
       ({ stdout } = await execFileAsync('claude', args, {
+        cwd: this.workDir,
         timeout: this.options?.timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
       }));
@@ -124,11 +152,4 @@ export function parseClaudeJsonOutput(stdout: string): AgentTurnResult & { sessi
     /* fall through to raw output */
   }
   return { text: stdout.trim(), isError: false };
-}
-
-export function createAgent(kind: 'claude'): Agent {
-  switch (kind) {
-    case 'claude':
-      return new ClaudeCodeAgent();
-  }
 }

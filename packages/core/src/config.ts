@@ -33,7 +33,7 @@ const configSchema = z.object({
       /** How often each test case is executed, to measure the spread in agent behavior. */
       iterations: z.number().int().min(1).max(100).default(3),
       /** Which chat agent executes the prompts. */
-      agent: z.literal('claude').default('claude'),
+      agent: z.enum(['claude', 'codex']).default('claude'),
       /** Hard timeout for a single agent invocation. */
       timeoutSeconds: z.number().int().min(1).default(300),
     })

@@ -1,4 +1,4 @@
-import type { Agent } from './agent.js';
+import type { Agent, AgentSession } from './agent.js';
 import type { EvalConfig } from './config.js';
 import { McpRecordingProxy, type ToolCallRecord } from './proxy.js';
 import type { TestCase } from './testcase.js';
@@ -170,9 +170,21 @@ export class EvalRunner {
     agent: Agent,
   ): Promise<IterationResult> {
     const { config } = this.opts;
-    const started = performance.now();
-
     const session = agent.createSession(proxyUrl, { timeoutMs: config.run.timeoutSeconds * 1000 });
+    try {
+      return await this.runConversation(testCase, iteration, proxy, session);
+    } finally {
+      await session.close?.();
+    }
+  }
+
+  private async runConversation(
+    testCase: TestCase,
+    iteration: number,
+    proxy: McpRecordingProxy,
+    session: AgentSession,
+  ): Promise<IterationResult> {
+    const started = performance.now();
     const turns: ConversationTurn[] = [];
     let error: string | undefined;
 

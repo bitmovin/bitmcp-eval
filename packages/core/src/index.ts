@@ -2,13 +2,15 @@ export {
   MCP_SERVER_ALIAS,
   ClaudeCodeAgent,
   AgentInvocationError,
-  createAgent,
   parseClaudeJsonOutput,
   type Agent,
+  type AgentKind,
   type AgentSession,
   type AgentSessionOptions,
   type AgentTurnResult,
 } from './agent.js';
+export { CodexExecAgent, parseCodexJsonl } from './codex_agent.js';
+export { createAgent } from './create_agent.js';
 export { loadConfig, loadEnvFile, interpolateEnv, type EvalConfig, type McpHeader } from './config.js';
 export { McpRecordingProxy, type ProxyOptions, type ToolCallRecord, type InjectionHeader } from './proxy.js';
 export { writeHtmlReport, renderHtmlReport } from './report.js';
