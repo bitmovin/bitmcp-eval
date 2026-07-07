@@ -8,11 +8,12 @@ function sampleReport(): EvalRunReport {
     startedAt: '2026-07-06T10:00:00.000Z',
     finishedAt: '2026-07-06T10:05:00.000Z',
     mcpUrl: 'http://127.0.0.1:3210/mcp',
-    agent: 'claude',
+    agents: ['claude'],
     iterationsPerTestCase: 2,
     plannedTestCases: 1,
     results: [
       {
+        agent: 'claude',
         testCase: {
           name: 'weather <script>alert(1)</script>',
           prompt: 'What is the weather in Vienna?',
@@ -66,6 +67,7 @@ function sampleReport(): EvalRunReport {
       },
     ],
     totals: { testCases: 1, iterations: 2, passedIterations: 1, failedIterations: 1 },
+    perAgent: [{ agent: 'claude', testCases: 1, iterations: 2, passedIterations: 1, failedIterations: 1 }],
   };
 }
 
@@ -117,6 +119,24 @@ describe('renderHtmlReport', () => {
     expect(html).toContain('Run aborted');
     expect(html).toContain('1 of 7 test cases were finished');
     expect(html).not.toContain('http-equiv="refresh"');
+  });
+
+  it('renders an agent comparison table only for multi-agent runs', () => {
+    expect(renderHtmlReport(sampleReport())).not.toContain('Agents compared');
+
+    const multi: EvalRunReport = {
+      ...sampleReport(),
+      agents: ['claude', 'codex'],
+      perAgent: [
+        { agent: 'claude', testCases: 1, iterations: 2, passedIterations: 2, failedIterations: 0 },
+        { agent: 'codex', testCases: 1, iterations: 2, passedIterations: 1, failedIterations: 1 },
+      ],
+    };
+    const html = renderHtmlReport(multi);
+    expect(html).toContain('Agents compared');
+    expect(html).toContain('codex');
+    expect(html).toContain('100%');
+    expect(html).toContain('50%');
   });
 
   it('surfaces escapes from the MCP binding', () => {

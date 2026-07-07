@@ -71,6 +71,11 @@ describe('parseCodexJsonl', () => {
   });
 
   it('falls back to raw output for unparseable stdout', () => {
-    expect(parseCodexJsonl('plain text\n')).toEqual({ text: 'plain text', isError: false, sessionId: undefined });
+    expect(parseCodexJsonl('plain text\n')).toEqual({
+      text: 'plain text',
+      isError: false,
+      sessionId: undefined,
+      escapes: [],
+    });
   });
 });

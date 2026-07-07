@@ -57,7 +57,7 @@ function makeConfig(mcpUrl: string, iterations: number): EvalConfig {
   return {
     mcp: { url: mcpUrl, headers: [] },
     testcases: { source: 'filesystem', path: '/unused' },
-    run: { iterations, agent: 'claude', timeoutSeconds: 60 },
+    run: { iterations, agents: ['claude'], timeoutSeconds: 60 },
     report: { outDir: '/unused' },
   };
 }
@@ -83,7 +83,7 @@ describe('EvalRunner', () => {
     const runner = new EvalRunner({
       config: makeConfig(upstream.url, 2),
       testCases: CASES,
-      agent,
+      agents: [agent],
       events: {
         onProxyStarted: () => events.push('proxy'),
         onTestCaseStart: (tc) => events.push(`start:${tc.name}`),
@@ -145,7 +145,7 @@ describe('EvalRunner', () => {
     const runner = new EvalRunner({
       config: makeConfig(upstream.url, 2),
       testCases: [CASES[0]],
-      agent: flakyAgent,
+      agents: [flakyAgent],
     });
     const report = await runner.run();
 
@@ -173,7 +173,7 @@ describe('EvalRunner', () => {
       file: '/t/funnel.yaml',
     };
 
-    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agents: [agent] });
     const report = await runner.run();
     const iteration = report.results[0].iterations[0];
 
@@ -193,7 +193,7 @@ describe('EvalRunner', () => {
     const agent = scriptedAgent({ p1: ['query'] });
     const testCase: TestCase = { ...CASES[0], answers: ['should never be sent'] };
 
-    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agents: [agent] });
     const report = await runner.run();
     const iteration = report.results[0].iterations[0];
 
@@ -208,7 +208,7 @@ describe('EvalRunner', () => {
     const agent = scriptedAgent({ p2: ['query'], 'answer 1': [] });
     const testCase: TestCase = { ...CASES[1], answers: ['answer 1'] };
 
-    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agent });
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agents: [agent] });
     const report = await runner.run();
     const iteration = report.results[0].iterations[0];
 
@@ -222,6 +222,41 @@ describe('EvalRunner', () => {
     });
   });
 
+  it('runs the whole suite once per agent and reports per-agent totals', async () => {
+    const upstream = await startUpstream();
+    cleanups.push(upstream.close);
+
+    const goodAgent = { ...scriptedAgent({ p1: ['query'], p2: ['query', 'queryTotal'] }), name: 'good' };
+    const badAgent = { ...scriptedAgent({}), name: 'bad' }; // never calls anything
+    const agentOrder: string[] = [];
+
+    const runner = new EvalRunner({
+      config: makeConfig(upstream.url, 1),
+      testCases: CASES,
+      agents: [goodAgent, badAgent],
+      events: {
+        onAgentStart: (agent, index, total) => agentOrder.push(`${agent}:${index}/${total}`),
+      },
+    });
+
+    const report = await runner.run();
+
+    expect(agentOrder).toEqual(['good:0/2', 'bad:1/2']);
+    expect(report.agents).toEqual(['good', 'bad']);
+    expect(report.plannedTestCases).toBe(4); // 2 test cases × 2 agents
+    expect(report.results.map((r) => `${r.agent}:${r.testCase.name}:${r.passRate}`)).toEqual([
+      'good:passing:1',
+      'good:failing:1',
+      'bad:passing:0',
+      'bad:failing:0',
+    ]);
+    expect(report.totals).toEqual({ testCases: 4, iterations: 4, passedIterations: 2, failedIterations: 2 });
+    expect(report.perAgent).toEqual([
+      { agent: 'good', testCases: 2, iterations: 2, passedIterations: 2, failedIterations: 0 },
+      { agent: 'bad', testCases: 2, iterations: 2, passedIterations: 0, failedIterations: 2 },
+    ]);
+  });
+
   it('emits a running report snapshot after every finished test case', async () => {
     const upstream = await startUpstream();
     cleanups.push(upstream.close);
@@ -230,7 +265,7 @@ describe('EvalRunner', () => {
     const runner = new EvalRunner({
       config: makeConfig(upstream.url, 1),
       testCases: CASES,
-      agent: scriptedAgent({ p1: ['query'], p2: ['query'] }),
+      agents: [scriptedAgent({ p1: ['query'], p2: ['query'] })],
       events: {
         onReportUpdate: (r) =>
           snapshots.push({ status: r.status, done: r.totals.testCases, planned: r.plannedTestCases }),

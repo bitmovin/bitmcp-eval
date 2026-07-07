@@ -19,8 +19,8 @@ export default function ConfigSummary({ config }: { config: EvalConfig }) {
       </Text>
       <Text>
         <Text bold>Run: </Text>
-        agent <Text color="cyan">{config.run.agent}</Text> · {config.run.iterations} iteration(s) per test case ·
-        timeout {config.run.timeoutSeconds}s
+        agent(s) <Text color="cyan">{config.run.agents.join(', ')}</Text> · {config.run.iterations} iteration(s) per
+        test case · timeout {config.run.timeoutSeconds}s
       </Text>
     </Box>
   );

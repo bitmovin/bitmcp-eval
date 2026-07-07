@@ -66,7 +66,7 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
 <main>
   <h1>bitmcp-eval report</h1>
   <div class="muted">
-    ${esc(formatDate(report.startedAt))} &middot; agent: <code>${esc(report.agent)}</code>
+    ${esc(formatDate(report.startedAt))} &middot; agent(s): <code>${esc(report.agents.join(', '))}</code>
     &middot; MCP server: <code>${esc(report.mcpUrl)}</code>
     &middot; ${report.iterationsPerTestCase} iteration(s) per test case
   </div>
@@ -90,7 +90,9 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
     <div class="stat"><div class="value">${Math.round(passRate * 100)}%</div><div class="label">Pass rate</div></div>
   </div>
 
-  ${report.results.map((result, index) => renderTestCase(result, index)).join('\n')}
+  ${report.agents.length > 1 ? renderAgentComparison(report) : ''}
+
+  ${report.results.map((result, index) => renderTestCase(result, index, report.agents.length > 1)).join('\n')}
 </main>
 ${detailsStateScript(report.startedAt)}
 </body>
@@ -126,11 +128,36 @@ function detailsStateScript(startedAt: string): string {
 </script>`;
 }
 
-function renderTestCase(result: TestCaseResult, index: number): string {
+/** Pass-rate comparison across agents, shown for multi-agent runs. */
+function renderAgentComparison(report: EvalRunReport): string {
+  return `<section class="card">
+  <header><h2>Agents compared</h2></header>
+  <table>
+    <thead><tr><th>Agent</th><th>Test case runs</th><th>Iterations</th><th>Passed</th><th>Failed</th><th>Pass rate</th></tr></thead>
+    <tbody>
+      ${report.perAgent
+        .map(
+          (t) => `<tr>
+        <td><code>${esc(t.agent)}</code></td>
+        <td>${t.testCases}</td>
+        <td>${t.iterations}</td>
+        <td class="pass">${t.passedIterations}</td>
+        <td class="${t.failedIterations > 0 ? 'fail' : ''}">${t.failedIterations}</td>
+        <td><b>${t.iterations === 0 ? '—' : `${Math.round((t.passedIterations / t.iterations) * 100)}%`}</b></td>
+      </tr>`,
+        )
+        .join('\n')}
+    </tbody>
+  </table>
+</section>`;
+}
+
+function renderTestCase(result: TestCaseResult, index: number, showAgent: boolean): string {
   const allPassed = result.iterations.every((it) => it.passed);
   return `<section class="card">
   <header>
     <h2>${esc(result.testCase.name)}</h2>
+    ${showAgent ? `<span class="tool">${esc(result.agent)}</span>` : ''}
     <span class="badge ${allPassed ? 'pass' : 'fail'}">${Math.round(result.passRate * 100)}% pass</span>
     <span class="muted">${esc(result.testCase.file)}</span>
   </header>

@@ -37,10 +37,19 @@ export interface IterationResult {
 }
 
 export interface TestCaseResult {
+  /** Name of the agent this result was produced with. */
+  agent: string;
   testCase: TestCase;
   iterations: IterationResult[];
   /** Fraction of iterations that passed, 0..1. */
   passRate: number;
+}
+
+export interface RunTotals {
+  testCases: number;
+  iterations: number;
+  passedIterations: number;
+  failedIterations: number;
 }
 
 export interface EvalRunReport {
@@ -53,24 +62,34 @@ export interface EvalRunReport {
   /** For running snapshots: the time of the snapshot. */
   finishedAt: string;
   mcpUrl: string;
-  agent: string;
+  /** The agents this run evaluates; the suite runs once per agent. */
+  agents: string[];
   iterationsPerTestCase: number;
-  /** How many test cases the run will execute in total. */
+  /** How many test case runs are planned in total (test cases × agents). */
   plannedTestCases: number;
-  /** Results of the test cases finished so far (all of them, once completed). */
+  /** Results of the test case runs finished so far (all of them, once completed). */
   results: TestCaseResult[];
-  totals: {
-    testCases: number;
-    iterations: number;
-    passedIterations: number;
-    failedIterations: number;
+  totals: RunTotals;
+  /** Totals broken down per agent, in run order. */
+  perAgent: Array<RunTotals & { agent: string }>;
+}
+
+function computeTotals(results: TestCaseResult[]): RunTotals {
+  const iterations = results.flatMap((r) => r.iterations);
+  return {
+    testCases: results.length,
+    iterations: iterations.length,
+    passedIterations: iterations.filter((it) => it.passed).length,
+    failedIterations: iterations.filter((it) => !it.passed).length,
   };
 }
 
 /** Progress callbacks so a UI can render the run live. All are optional. */
 export interface RunnerEvents {
   onProxyStarted?(proxyUrl: string, targetUrl: string): void;
-  onTestCaseStart?(testCase: TestCase, index: number, total: number): void;
+  /** Fired when the suite starts for the next agent. */
+  onAgentStart?(agent: string, index: number, total: number): void;
+  onTestCaseStart?(testCase: TestCase, index: number, total: number, agent: string): void;
   onIterationStart?(testCase: TestCase, iteration: number, iterations: number): void;
   onToolCall?(record: ToolCallRecord): void;
   onIterationEnd?(testCase: TestCase, result: IterationResult): void;
@@ -85,7 +104,8 @@ export interface RunnerEvents {
 export interface EvalRunnerOptions {
   config: EvalConfig;
   testCases: TestCase[];
-  agent: Agent;
+  /** The suite is executed once per agent, in order. */
+  agents: Agent[];
   events?: RunnerEvents;
 }
 
@@ -98,8 +118,9 @@ export class EvalRunner {
   constructor(private readonly opts: EvalRunnerOptions) {}
 
   async run(): Promise<EvalRunReport> {
-    const { config, testCases, agent, events } = this.opts;
+    const { config, testCases, agents, events } = this.opts;
     const startedAt = new Date();
+    const plannedTestCases = testCases.length * agents.length;
 
     const proxy = new McpRecordingProxy({
       targetUrl: config.mcp.url,
@@ -112,31 +133,36 @@ export class EvalRunner {
 
     const results: TestCaseResult[] = [];
     try {
-      for (const [index, testCase] of testCases.entries()) {
-        events?.onTestCaseStart?.(testCase, index, testCases.length);
+      for (const [agentIndex, agent] of agents.entries()) {
+        events?.onAgentStart?.(agent.name, agentIndex, agents.length);
 
-        const iterations: IterationResult[] = [];
-        for (let i = 1; i <= config.run.iterations; i++) {
-          events?.onIterationStart?.(testCase, i, config.run.iterations);
-          proxy.clear();
-          iterations.push(await this.runIteration(testCase, i, proxy, proxyUrl, agent));
-          events?.onIterationEnd?.(testCase, iterations[iterations.length - 1]);
+        for (const [index, testCase] of testCases.entries()) {
+          events?.onTestCaseStart?.(testCase, index, testCases.length, agent.name);
+
+          const iterations: IterationResult[] = [];
+          for (let i = 1; i <= config.run.iterations; i++) {
+            events?.onIterationStart?.(testCase, i, config.run.iterations);
+            proxy.clear();
+            iterations.push(await this.runIteration(testCase, i, proxy, proxyUrl, agent));
+            events?.onIterationEnd?.(testCase, iterations[iterations.length - 1]);
+          }
+
+          const result: TestCaseResult = {
+            agent: agent.name,
+            testCase,
+            iterations,
+            passRate: iterations.filter((it) => it.passed).length / iterations.length,
+          };
+          results.push(result);
+          events?.onTestCaseEnd?.(result);
+          events?.onReportUpdate?.(this.buildReport('running', startedAt, results, plannedTestCases));
         }
-
-        const result: TestCaseResult = {
-          testCase,
-          iterations,
-          passRate: iterations.filter((it) => it.passed).length / iterations.length,
-        };
-        results.push(result);
-        events?.onTestCaseEnd?.(result);
-        events?.onReportUpdate?.(this.buildReport('running', startedAt, results, testCases.length));
       }
     } finally {
       await proxy.stop();
     }
 
-    return this.buildReport('completed', startedAt, results, testCases.length);
+    return this.buildReport('completed', startedAt, results, plannedTestCases);
   }
 
   private buildReport(
@@ -145,24 +171,21 @@ export class EvalRunner {
     results: TestCaseResult[],
     plannedTestCases: number,
   ): EvalRunReport {
-    const { config, agent } = this.opts;
-    const allIterations = results.flatMap((r) => r.iterations);
+    const { config, agents } = this.opts;
     return {
       status,
       startedAt: startedAt.toISOString(),
       finishedAt: new Date().toISOString(),
       mcpUrl: config.mcp.url,
-      agent: agent.name,
+      agents: agents.map((a) => a.name),
       iterationsPerTestCase: config.run.iterations,
       plannedTestCases,
       // shallow copy so later mutation never leaks into an already-emitted snapshot
       results: [...results],
-      totals: {
-        testCases: results.length,
-        iterations: allIterations.length,
-        passedIterations: allIterations.filter((it) => it.passed).length,
-        failedIterations: allIterations.filter((it) => !it.passed).length,
-      },
+      totals: computeTotals(results),
+      perAgent: agents
+        .map((a) => ({ agent: a.name, ...computeTotals(results.filter((r) => r.agent === a.name)) }))
+        .filter((t) => t.testCases > 0),
     };
   }
 

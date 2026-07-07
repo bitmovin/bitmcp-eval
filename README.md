@@ -124,7 +124,7 @@ testcases:
 
 run:
   iterations: 3 # run each test case 3× to see the behavioral spread
-  agent: claude
+  agents: [claude] # add codex to compare agents: [claude, codex]
   timeoutSeconds: 300
 
 report:
@@ -149,22 +149,24 @@ banner and auto-refreshes every 10 seconds until the run completes.
 
 ## Configuration reference
 
-| Key                  | Type                | Default                           | Description                                                                                          |
-| -------------------- | ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `envFile`            | string              | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.         |
-| `mcp.url`            | URL, required       | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                |
-| `mcp.headers[]`      | `{name, value}`     | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated. |
-| `testcases.source`   | `filesystem`        | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                      |
-| `testcases.path`     | string, required    | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                    |
-| `run.iterations`     | int 1–100           | `3`                               | Executions per test case, to measure behavioral spread.                                              |
-| `run.agent`          | `claude` \| `codex` | `claude`                          | Chat agent used to execute prompts. See "Choosing the agent" below.                                  |
-| `run.timeoutSeconds` | int                 | `300`                             | Hard limit per agent invocation.                                                                     |
-| `report.outDir`      | string              | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                   |
+| Key                  | Type                        | Default                           | Description                                                                                                                                           |
+| -------------------- | --------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `envFile`            | string                      | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.                                                          |
+| `mcp.url`            | URL, required               | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                                                                 |
+| `mcp.headers[]`      | `{name, value}`             | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated.                                                  |
+| `testcases.source`   | `filesystem`                | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                                                                       |
+| `testcases.path`     | string, required            | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                                                                     |
+| `run.iterations`     | int 1–100                   | `3`                               | Executions per test case, to measure behavioral spread.                                                                                               |
+| `run.agents`         | list of `claude` \| `codex` | `[claude]`                        | Agents to evaluate — the whole suite runs once per agent, with per-agent pass rates in the report. `run.agent: <name>` works as a single-agent alias. |
+| `run.timeoutSeconds` | int                         | `300`                             | Hard limit per agent invocation.                                                                                                                      |
+| `report.outDir`      | string                      | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                                                                    |
 
-## Choosing the agent
+## Choosing the agents
 
-The agent is a property of the run (`run.agent` in `eval.yaml`), so the same test cases can
-be evaluated against different agents.
+Agents are a property of the run (`run.agents` in `eval.yaml`). With more than one agent
+the whole test suite executes once per agent, and both the TUI summary and the HTML
+report ("Agents compared") break the pass rates down per agent — ideal for questions like
+"does codex use my server as reliably as claude?".
 
 **`claude`** (default) — each turn runs `claude -p … --strict-mcp-config`, so the server
 under test is the agent's _only_ MCP server and only its tools are auto-allowed. Follow-up

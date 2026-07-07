@@ -9,6 +9,9 @@ const headerSchema = z.object({
   value: z.string(),
 });
 
+/** Must stay in sync with `AgentKind` in agent.ts. */
+const agentKindSchema = z.enum(['claude', 'codex']);
+
 const configSchema = z.object({
   /**
    * Optional dotenv file loaded before `${VAR}` interpolation. Defaults to a
@@ -32,12 +35,21 @@ const configSchema = z.object({
     .object({
       /** How often each test case is executed, to measure the spread in agent behavior. */
       iterations: z.number().int().min(1).max(100).default(3),
-      /** Which chat agent executes the prompts. */
-      agent: z.enum(['claude', 'codex']).default('claude'),
+      /** Single chat agent — legacy alias for `agents: [<agent>]`. */
+      agent: agentKindSchema.optional(),
+      /** Chat agents to evaluate; the whole test suite runs once per agent. */
+      agents: z.array(agentKindSchema).min(1).optional(),
       /** Hard timeout for a single agent invocation. */
       timeoutSeconds: z.number().int().min(1).default(300),
     })
-    .default({ iterations: 3, agent: 'claude', timeoutSeconds: 300 }),
+    .refine((run) => !(run.agent && run.agents), {
+      message: 'Use either run.agent or run.agents, not both',
+    })
+    .transform(({ agent, agents, ...rest }) => ({
+      ...rest,
+      agents: [...new Set(agents ?? (agent ? [agent] : ['claude' as const]))],
+    }))
+    .default({ iterations: 3, timeoutSeconds: 300, agents: ['claude'] }),
   report: z
     .object({
       /** Directory the HTML report is written to. Relative paths resolve against the config file. */

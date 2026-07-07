@@ -35,7 +35,64 @@ testcases:
     expect(config.mcp.url).toBe('http://127.0.0.1:3210/mcp');
     expect(config.mcp.headers).toEqual([]);
     expect(config.testcases.source).toBe('filesystem');
-    expect(config.run).toEqual({ iterations: 3, agent: 'claude', timeoutSeconds: 300 });
+    expect(config.run).toEqual({ iterations: 3, agents: ['claude'], timeoutSeconds: 300 });
+  });
+
+  it('accepts a list of agents and dedupes it', async () => {
+    const path = await writeConfig(
+      dir,
+      `mcp:
+  url: http://127.0.0.1:3210/mcp
+testcases:
+  path: ./testcases
+run:
+  agents: [codex, claude, codex]
+`,
+    );
+    expect(loadConfig(path).run.agents).toEqual(['codex', 'claude']);
+  });
+
+  it('treats the singular agent field as a one-element agents list', async () => {
+    const path = await writeConfig(
+      dir,
+      `mcp:
+  url: http://127.0.0.1:3210/mcp
+testcases:
+  path: ./testcases
+run:
+  agent: codex
+`,
+    );
+    expect(loadConfig(path).run.agents).toEqual(['codex']);
+  });
+
+  it('rejects configs that set both agent and agents', async () => {
+    const path = await writeConfig(
+      dir,
+      `mcp:
+  url: http://127.0.0.1:3210/mcp
+testcases:
+  path: ./testcases
+run:
+  agent: claude
+  agents: [codex]
+`,
+    );
+    expect(() => loadConfig(path)).toThrow(/either run.agent or run.agents/);
+  });
+
+  it('rejects unknown agents', async () => {
+    const path = await writeConfig(
+      dir,
+      `mcp:
+  url: http://127.0.0.1:3210/mcp
+testcases:
+  path: ./testcases
+run:
+  agents: [gemini]
+`,
+    );
+    expect(() => loadConfig(path)).toThrow(/invalid/i);
   });
 
   it('resolves relative paths against the config file directory', async () => {

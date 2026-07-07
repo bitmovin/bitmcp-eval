@@ -17,6 +17,7 @@ import ConfigSummary from './config_summary.js';
 type Phase = 'loading' | 'running' | 'done' | 'error';
 
 interface CurrentIteration {
+  agent: string;
   testCase: TestCase;
   index: number;
   total: number;
@@ -82,11 +83,12 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
       const runner = new EvalRunner({
         config: cfg,
         testCases: cases,
-        agent: createAgent(cfg.run.agent),
+        agents: cfg.run.agents.map(createAgent),
         events: {
           onProxyStarted: (url) => setProxyUrl(url),
-          onTestCaseStart: (testCase, index, total) =>
+          onTestCaseStart: (testCase, index, total, agent) =>
             setCurrent({
+              agent,
               testCase,
               index,
               total,
@@ -145,12 +147,19 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
   }
 
   const iterationsDone = completed.reduce((n, r) => n + r.iterations.length, 0) + (current?.finished.length ?? 0);
-  const iterationsTotal = testCases.length * (config?.run.iterations ?? 1);
+  const iterationsTotal = testCases.length * (config?.run.iterations ?? 1) * (config?.run.agents.length ?? 1);
+  const multiAgent = (config?.run.agents.length ?? 1) > 1;
 
   return (
     <Box flexDirection="column">
       <Static items={completed}>
-        {(result) => <CompletedTestCaseRow key={result.testCase.file} result={result} />}
+        {(result) => (
+          <CompletedTestCaseRow
+            key={`${result.agent}:${result.testCase.file}`}
+            result={result}
+            showAgent={multiAgent}
+          />
+        )}
       </Static>
 
       <Header title="bitmcp-eval — MCP evaluation run" />
@@ -189,6 +198,7 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
                 <Text dimColor>
                   [{current.index + 1}/{current.total}]
                 </Text>{' '}
+                {multiAgent && <Text color="cyan">({current.agent}) </Text>}
                 <Text bold>{current.testCase.name}</Text> <IterationMarks passes={current.finished} />
               </Text>
               <Text dimColor italic>
@@ -211,12 +221,13 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
   );
 }
 
-function CompletedTestCaseRow({ result }: { result: TestCaseResult }) {
+function CompletedTestCaseRow({ result, showAgent }: { result: TestCaseResult; showAgent: boolean }) {
   const allPassed = result.iterations.every((it) => it.passed);
   return (
     <Text>
-      <Text color={allPassed ? 'green' : 'red'}>{allPassed ? '✓' : '✗'}</Text> {result.testCase.name}{' '}
-      <IterationMarks passes={result.iterations.map((it) => it.passed)} />
+      <Text color={allPassed ? 'green' : 'red'}>{allPassed ? '✓' : '✗'}</Text>{' '}
+      {showAgent && <Text color="cyan">({result.agent}) </Text>}
+      {result.testCase.name} <IterationMarks passes={result.iterations.map((it) => it.passed)} />
       <Text dimColor>
         {' '}
         ({result.iterations.filter((it) => it.passed).length}/{result.iterations.length} passed)
@@ -233,13 +244,22 @@ function RunSummary({ report, htmlPath }: { report: EvalRunReport; htmlPath: str
       <Box borderStyle="round" paddingLeft={1} paddingRight={1} flexDirection="column" alignSelf="flex-start">
         <Text bold>Run finished</Text>
         <Text>
-          {totals.testCases} test cases · {totals.iterations} iterations ·{' '}
+          {totals.testCases} test case runs · {totals.iterations} iterations ·{' '}
           <Text color="green">{totals.passedIterations} passed</Text> ·{' '}
           <Text color={totals.failedIterations > 0 ? 'red' : undefined}>{totals.failedIterations} failed</Text> ·{' '}
           <Text bold color={passRate === 100 ? 'green' : passRate >= 50 ? 'yellow' : 'red'}>
             {passRate}% pass rate
           </Text>
         </Text>
+        {report.agents.length > 1 &&
+          report.perAgent.map((t) => (
+            <Text key={t.agent}>
+              {'  '}
+              <Text color="cyan">{t.agent}</Text>: {t.passedIterations}/{t.iterations} passed (
+              <Text bold>{t.iterations === 0 ? '—' : `${Math.round((t.passedIterations / t.iterations) * 100)}%`}</Text>
+              )
+            </Text>
+          ))}
         <Text>
           Report: <Text color="blue">file://{htmlPath}</Text>
         </Text>

@@ -16,7 +16,7 @@ testcases:
 
 run:
   iterations: 2 # execute every test case this often to see the spread in agent behavior
-  agent: claude # or: codex (see README for codex-specific caveats)
+  agents: [claude] # evaluate several: [claude, codex] (see README for codex caveats)
   timeoutSeconds: 300
 
 report:

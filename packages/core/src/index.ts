@@ -21,6 +21,7 @@ export {
   type EvalRunReport,
   type IterationResult,
   type RunnerEvents,
+  type RunTotals,
   type TestCaseResult,
 } from './runner.js';
 export { loadTestCases, type TestCase } from './testcase.js';
