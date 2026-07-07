@@ -190,8 +190,11 @@ under test is the agent's _only_ MCP server and only its tools are auto-allowed.
 
 **`codex`** — each turn runs `codex exec --json …` with the proxy injected via a config
 override; follow-up `answers` use `codex exec resume <thread-id>`. The harness disables
-codex's built-in web search (`web_search="disabled"`) and runs each session in a neutral
-temp directory with an `AGENTS.md` steering it to answer only via the server under test.
+codex's built-in web search (`web_search="disabled"`) and ChatGPT apps/connectors
+(`features.apps=false` — codex was observed answering from the logged-in account's
+connectors, with that account's credentials, instead of the server under test), and runs
+each session in a neutral temp directory with an `AGENTS.md` steering it to answer only
+via the server under test.
 Caveats inherent to today's codex CLI:
 
 - `--dangerously-bypass-approvals-and-sandbox` is passed automatically because headless

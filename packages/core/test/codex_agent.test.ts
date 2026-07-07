@@ -79,6 +79,22 @@ describe('parseCodexJsonl', () => {
     });
   });
 
+  it('detects foreign MCP servers (ChatGPT apps/connectors) as escapes, but not the server under test', () => {
+    // Shape captured from a real run: a Bitmovin ChatGPT app answered instead
+    // of the server under test, via the "codex_apps" MCP server.
+    const stdout = [
+      THREAD,
+      '{"type":"item.completed","item":{"id":"item_0","type":"mcp_tool_call","server":"codex_apps","tool":"bitmovin.observability_peekAllLicenses","status":"completed"}}',
+      '{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"mcp-under-test","tool":"peekAllLicenses","status":"completed"}}',
+      '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"There are 5 licenses."}}',
+    ].join('\n');
+
+    expect(parseCodexJsonl(stdout)).toMatchObject({
+      text: 'There are 5 licenses.',
+      escapes: ['foreign MCP server: codex_apps → bitmovin.observability_peekAllLicenses'],
+    });
+  });
+
   it('reports turn.failed when no agent message was produced', () => {
     const stdout = [THREAD, '{"type":"turn.failed","error":{"message":"model overloaded"}}'].join('\n');
     expect(parseCodexJsonl(stdout)).toMatchObject({ text: 'model overloaded', isError: true });

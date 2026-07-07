@@ -22,8 +22,8 @@ const execFileAsync = promisify(execFile);
  * lever — see the caveats on {@link CodexExecAgent}.
  */
 const CODEX_GUARDRAILS = `You are being evaluated on how you use the tools of the MCP server "${MCP_SERVER_ALIAS}".
-Answer user questions exclusively with the MCP tools this server provides.
-Never answer from your own knowledge, never run shell commands, and never fetch data from the network in any other way.
+Answer user questions exclusively with the MCP tools of the "${MCP_SERVER_ALIAS}" server.
+Never answer from your own knowledge, never run shell commands, never use ChatGPT apps/connectors/plugins or any other MCP server, and never fetch data from the network in any other way.
 `;
 
 /**
@@ -115,6 +115,10 @@ export function buildCodexExecArgs(message: string, mcpUrl: string, sessionId?: 
     // built-in web search instead of the MCP server under test.
     '-c',
     'web_search="disabled"',
+    // ... or via ChatGPT apps/connectors of the logged-in account (observed
+    // answering from a "codex_apps" MCP server with foreign credentials).
+    '-c',
+    'features.apps=false',
   );
   return args;
 }
@@ -144,13 +148,17 @@ export function parseCodexJsonl(stdout: string): AgentTurnResult & { sessionId?:
     if (event.type === 'thread.started' && typeof event.thread_id === 'string') {
       sessionId = event.thread_id;
     } else if (event.type === 'item.completed') {
-      const item = event.item as { type?: string; text?: string; command?: string; query?: string } | undefined;
+      const item = event.item as
+        { type?: string; text?: string; command?: string; query?: string; server?: string; tool?: string } | undefined;
       if (item?.type === 'agent_message' && typeof item.text === 'string') {
         lastMessage = item.text;
       } else if (item?.type === 'command_execution') {
         escapes.push(`shell: ${truncate(item.command ?? '(unknown command)')}`);
       } else if (item?.type === 'web_search') {
         escapes.push(`web search: ${truncate(item.query ?? '(unknown query)')}`);
+      } else if (item?.type === 'mcp_tool_call' && item.server !== MCP_SERVER_ALIAS) {
+        // e.g. ChatGPT apps/connectors surface as server "codex_apps"
+        escapes.push(`foreign MCP server: ${item.server ?? '(unknown)'} → ${truncate(item.tool ?? '(unknown tool)')}`);
       }
     } else if (event.type === 'error' && typeof event.message === 'string') {
       errorMessage = event.message;
