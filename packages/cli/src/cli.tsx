@@ -12,6 +12,8 @@ const cli = meow(
   Options
     --config, -c      Path to the eval config YAML (default: ./eval.yaml)
     --iterations, -i  Override run.iterations from the config
+    --debug           Log every proxied request's headers and tools to
+                      <report.outDir>/bitmcp-eval-debug.log (contains secrets!)
 
   Examples
     $ bitmcp-eval --config examples/eval.yaml
@@ -22,8 +24,9 @@ const cli = meow(
     flags: {
       config: { type: 'string', shortFlag: 'c', default: './eval.yaml' },
       iterations: { type: 'number', shortFlag: 'i' },
+      debug: { type: 'boolean', default: false },
     },
   },
 );
 
-render(<App configPath={cli.flags.config} iterationsOverride={cli.flags.iterations} />);
+render(<App configPath={cli.flags.config} iterationsOverride={cli.flags.iterations} debug={cli.flags.debug} />);

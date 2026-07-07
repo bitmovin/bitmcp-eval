@@ -1,6 +1,6 @@
 import type { Agent, AgentSession } from './agent.js';
 import type { EvalConfig } from './config.js';
-import { McpRecordingProxy, type ToolCallRecord } from './proxy.js';
+import { McpRecordingProxy, type ProxyRequestInfo, type ToolCallRecord } from './proxy.js';
 import type { TestCase } from './testcase.js';
 import { validateToolCalls, type ValidationResult } from './validate.js';
 
@@ -87,6 +87,8 @@ function computeTotals(results: TestCaseResult[]): RunTotals {
 /** Progress callbacks so a UI can render the run live. All are optional. */
 export interface RunnerEvents {
   onProxyStarted?(proxyUrl: string, targetUrl: string): void;
+  /** Fired for every request the proxy forwards upstream — headers contain secrets, handle with care. */
+  onProxyRequest?(info: ProxyRequestInfo): void;
   /** Fired when the suite starts for the next agent. */
   onAgentStart?(agent: string, index: number, total: number): void;
   onTestCaseStart?(testCase: TestCase, index: number, total: number, agent: string): void;
@@ -126,6 +128,7 @@ export class EvalRunner {
       targetUrl: config.mcp.url,
       injectionHeaders: config.mcp.headers,
       onRecord: (rec) => events?.onToolCall?.(rec),
+      onRequest: (info) => events?.onProxyRequest?.(info),
     });
 
     const { url: proxyUrl } = await proxy.start();

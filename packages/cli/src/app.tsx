@@ -1,3 +1,5 @@
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Static, Text, useApp } from 'ink';
 import {
@@ -32,9 +34,11 @@ interface CurrentIteration {
 export interface AppProps {
   configPath: string;
   iterationsOverride?: number;
+  /** Log proxied request headers (secrets included) to a file in the report dir. */
+  debug?: boolean;
 }
 
-export default function App({ configPath, iterationsOverride }: AppProps) {
+export default function App({ configPath, iterationsOverride, debug }: AppProps) {
   const { exit } = useApp();
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<Error | null>(null);
@@ -45,6 +49,7 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
   const [completed, setCompleted] = useState<TestCaseResult[]>([]);
   const [report, setReport] = useState<{ report: EvalRunReport; htmlPath: string } | null>(null);
   const [liveReportPath, setLiveReportPath] = useState<string | null>(null);
+  const [debugLogPath, setDebugLogPath] = useState<string | null>(null);
   const started = useRef(false);
   // Report writes go to the same file; chain them so snapshots never interleave.
   const reportWrites = useRef<Promise<unknown>>(Promise.resolve());
@@ -80,12 +85,28 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
       setTestCases(cases);
       setPhase('running');
 
+      let logProxyRequest: ((info: import('@bitmcp-eval/core').ProxyRequestInfo) => void) | undefined;
+      if (debug) {
+        mkdirSync(cfg.report.outDir, { recursive: true });
+        const logPath = join(cfg.report.outDir, 'bitmcp-eval-debug.log');
+        appendFileSync(logPath, `\n--- run started ${new Date().toISOString()} (headers contain secrets!) ---\n`);
+        setDebugLogPath(logPath);
+        logProxyRequest = (info) => {
+          const tools = info.toolNames.length ? ` tools/call [${info.toolNames.join(', ')}]` : '';
+          const headers = Object.entries(info.headers)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(' ');
+          appendFileSync(logPath, `${new Date().toISOString()} ${info.method}${tools} | ${headers}\n`);
+        };
+      }
+
       const runner = new EvalRunner({
         config: cfg,
         testCases: cases,
         agents: cfg.run.agents.map(createAgent),
         events: {
           onProxyStarted: (url) => setProxyUrl(url),
+          onProxyRequest: logProxyRequest,
           onTestCaseStart: (testCase, index, total, agent) =>
             setCurrent({
               agent,
@@ -128,7 +149,7 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
       setError(err instanceof Error ? err : new Error(String(err)));
       setPhase('error');
     });
-  }, [configPath, iterationsOverride]);
+  }, [configPath, iterationsOverride, debug]);
 
   useEffect(() => {
     if (phase === 'done') exit();
@@ -176,6 +197,13 @@ export default function App({ configPath, iterationsOverride }: AppProps) {
         ) : (
           phase === 'running' && <Spinner label="Starting recording proxy…" />
         ))}
+
+      {debugLogPath && (
+        <Text>
+          <Text color="yellow">⚠</Text> Debug log: <Text color="blue">{debugLogPath}</Text>{' '}
+          <Text dimColor>(request headers incl. secrets — do not share)</Text>
+        </Text>
+      )}
 
       {phase === 'running' && testCases.length > 0 && (
         <Box flexDirection="column" marginTop={1}>

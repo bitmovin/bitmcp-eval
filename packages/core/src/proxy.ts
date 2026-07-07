@@ -19,6 +19,15 @@ export type InjectionHeader = {
   value: string;
 };
 
+/** One outgoing proxied request, for diagnostics. */
+export interface ProxyRequestInfo {
+  method: string;
+  /** Names of the tools/call requests in this message, when any. */
+  toolNames: string[];
+  /** The headers actually sent upstream, after injection. Contains secrets. */
+  headers: Record<string, string>;
+}
+
 export interface ProxyOptions {
   /** Where the real MCP server listens, e.g. "http://127.0.0.1:3000/mcp". */
   targetUrl: string;
@@ -26,6 +35,8 @@ export interface ProxyOptions {
   port?: number;
   /** Called for every completed tools/call. */
   onRecord?: (rec: ToolCallRecord) => void;
+  /** Called for every request forwarded upstream — for debugging header issues. */
+  onRequest?: (info: ProxyRequestInfo) => void;
 
   // Any headers which we must inject to the mcp server calls?
   // E.g. authentication headers? x-api-key?
@@ -128,6 +139,11 @@ export class McpRecordingProxy {
     res.on('close', () => ac.abort());
 
     const method = req.method ?? 'GET';
+    this.opts.onRequest?.({
+      method,
+      toolNames: [...pending.values()].map((p) => p.name),
+      headers: { ...fwdHeaders },
+    });
     const upstream = await fetch(target.toString(), {
       method,
       headers: fwdHeaders,

@@ -128,6 +128,30 @@ describe('McpRecordingProxy', () => {
     expect(upstream.seenHeaders[0]['x-api-key']).toBe('secret-123');
   });
 
+  it('reports every forwarded request with tool names and post-injection headers via onRequest', async () => {
+    const upstream = await startFakeUpstream('json');
+    cleanups.push(upstream.close);
+    const requests: import('../src/proxy.js').ProxyRequestInfo[] = [];
+    const proxy = new McpRecordingProxy({
+      targetUrl: upstream.url,
+      injectionHeaders: [{ name: 'x-api-key', value: 'secret-123' }],
+      onRequest: (info) => requests.push(info),
+    });
+    const { url } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: toolsCallBody(4, 'peekAllLicenses', {}),
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe('POST');
+    expect(requests[0].toolNames).toEqual(['peekAllLicenses']);
+    expect(requests[0].headers['x-api-key']).toBe('secret-123');
+  });
+
   it('records MCP tool-level errors (result.isError) as failed calls', async () => {
     const { records, proxyUrl } = await setup('tool-error');
 

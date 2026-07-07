@@ -150,8 +150,11 @@ report:
 ### 3. Run
 
 ```sh
-yarn start -c eval.yaml        # full run
-yarn start -c eval.yaml -i 10  # override iterations from the CLI
+yarn start -c eval.yaml          # full run
+yarn start -c eval.yaml -i 10    # override iterations from the CLI
+yarn start -c eval.yaml --debug  # additionally log every proxied request's headers
+#                                  to <report.outDir>/bitmcp-eval-debug.log — useful for
+#                                  diagnosing auth issues. Contains secrets, do not share.
 ```
 
 The process exits non-zero when the run itself fails (bad config, unreachable server).
