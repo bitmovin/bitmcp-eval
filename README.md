@@ -32,7 +32,7 @@ locally or remote, with authentication headers injected transparently.
 - Node.js ≥ 20 with corepack enabled (Yarn Berry)
 - A chat agent CLI, installed and authenticated:
   - [Claude Code](https://claude.com/claude-code) (`claude`) — the default, or
-  - [OpenAI Codex](https://github.com/openai/codex) (`codex`) — select with `run.agent: codex`
+  - [OpenAI Codex](https://github.com/openai/codex) (`codex`) — select via `run.agents: [codex]` or run both for comparison
 
 ## Quickstart (2 minutes, bundled demo server)
 
