@@ -168,17 +168,18 @@ banner and auto-refreshes every 10 seconds until the run completes.
 
 ## Configuration reference
 
-| Key                  | Type                        | Default                           | Description                                                                                                                                           |
-| -------------------- | --------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `envFile`            | string                      | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.                                                          |
-| `mcp.url`            | URL, required               | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                                                                 |
-| `mcp.headers[]`      | `{name, value}`             | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated.                                                  |
-| `testcases.source`   | `filesystem`                | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                                                                       |
-| `testcases.path`     | string, required            | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                                                                     |
-| `run.iterations`     | int 1–100                   | `3`                               | Executions per test case, to measure behavioral spread.                                                                                               |
-| `run.agents`         | list of `claude` \| `codex` | `[claude]`                        | Agents to evaluate — the whole suite runs once per agent, with per-agent pass rates in the report. `run.agent: <name>` works as a single-agent alias. |
-| `run.timeoutSeconds` | int                         | `300`                             | Hard limit per agent invocation.                                                                                                                      |
-| `report.outDir`      | string                      | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                                                                    |
+| Key                  | Type                        | Default                           | Description                                                                                                                                                                                                                    |
+| -------------------- | --------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `envFile`            | string                      | `.env` next to config, if present | Dotenv file loaded before `${VAR}` interpolation. Shell environment always takes precedence.                                                                                                                                   |
+| `mcp.url`            | URL, required               | —                                 | StreamableHTTP endpoint of the MCP server under test.                                                                                                                                                                          |
+| `mcp.headers[]`      | `{name, value}`             | `[]`                              | Headers injected into every proxied request (e.g. API keys). `${VAR}` placeholders are interpolated.                                                                                                                           |
+| `mcp.oauth`          | object                      | —                                 | Only for OAuth servers **without** dynamic client registration: `clientId`, `clientSecret` (both `${VAR}`-interpolated), optional `scopes`, `redirectPort`. OAuth itself is auto-detected — see "OAuth-protected MCP servers". |
+| `testcases.source`   | `filesystem`                | `filesystem`                      | Test case provider. `s3` and `git` are planned.                                                                                                                                                                                |
+| `testcases.path`     | string, required            | —                                 | Directory with `*.yaml` test cases. Relative to the config file. `~` is expanded.                                                                                                                                              |
+| `run.iterations`     | int 1–100                   | `3`                               | Executions per test case, to measure behavioral spread.                                                                                                                                                                        |
+| `run.agents`         | list of `claude` \| `codex` | `[claude]`                        | Agents to evaluate — the whole suite runs once per agent, with per-agent pass rates in the report. `run.agent: <name>` works as a single-agent alias.                                                                          |
+| `run.timeoutSeconds` | int                         | `300`                             | Hard limit per agent invocation.                                                                                                                                                                                               |
+| `report.outDir`      | string                      | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                                                                                                                                             |
 
 ## Choosing the agents
 
@@ -217,6 +218,47 @@ Caveats inherent to today's codex CLI:
   `--ignore-user-config` also drops the override that injects the proxy), so MCP servers
   from your own `~/.codex/config.toml` stay visible to the agent during the eval. Keep the
   eval machine's codex config clean for unpolluted results.
+
+## OAuth-protected MCP servers
+
+Most hosted MCP servers require OAuth. bitmcp-eval **auto-detects** this: if the server
+answers the initial request with a `401` challenge, the harness runs an OAuth login and
+then injects the resulting bearer token on every proxied request — the chat agent never
+touches OAuth.
+
+```sh
+# Log in once (opens your browser); the token is cached and refreshed automatically.
+yarn start login -c eval.yaml
+
+# Normal runs then just work — and will prompt for login on their own if no
+# valid token is cached and the terminal is interactive.
+yarn start -c eval.yaml
+```
+
+- **Dynamic client registration (DCR):** if the server supports it (most do), no config is
+  needed at all — the harness registers its own client on the fly.
+- **No DCR:** register an OAuth client yourself, allow the redirect URI
+  `http://127.0.0.1:8765/callback` (change the port with `mcp.oauth.redirectPort`), and
+  supply its credentials:
+
+  ```yaml
+  mcp:
+    url: https://your-mcp-server/mcp
+    oauth:
+      clientId: ${MCP_CLIENT_ID}
+      clientSecret: ${MCP_CLIENT_SECRET} # ${VAR} — keep secrets out of the file
+      # scopes: [openid, offline_access]
+      # redirectPort: 8765
+  ```
+
+Tokens are cached per authorization-server + resource under `~/.bitmcp-eval/tokens/`
+(mode `0600`), so one login serves every config pointing at that server, and access tokens
+are refreshed silently mid-run. For CI, run `bitmcp-eval login` once on a machine with a
+browser; non-interactive runs reuse and refresh the cached token, and fail with a clear
+message if none exists.
+
+> Already have a token by other means? OAuth is just a header — you can skip all of the
+> above and set `Authorization: Bearer ${TOKEN}` under `mcp.headers` instead.
 
 ## How it works
 

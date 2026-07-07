@@ -4,12 +4,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Box, Static, Text, useApp } from 'ink';
 import {
   createAgent,
+  createAuthSession,
   loadConfig,
   loadTestCases,
   writeHtmlReport,
   EvalRunner,
   type EvalConfig,
   type EvalRunReport,
+  type ProxyRequestInfo,
   type TestCase,
   type TestCaseResult,
 } from '@bitmcp-eval/core';
@@ -50,6 +52,7 @@ export default function App({ configPath, iterationsOverride, debug }: AppProps)
   const [report, setReport] = useState<{ report: EvalRunReport; htmlPath: string } | null>(null);
   const [liveReportPath, setLiveReportPath] = useState<string | null>(null);
   const [debugLogPath, setDebugLogPath] = useState<string | null>(null);
+  const [authUrl, setAuthUrl] = useState<string | null>(null);
   const started = useRef(false);
   // Report writes go to the same file; chain them so snapshots never interleave.
   const reportWrites = useRef<Promise<unknown>>(Promise.resolve());
@@ -83,9 +86,19 @@ export default function App({ configPath, iterationsOverride, debug }: AppProps)
 
       const cases = await loadTestCases(cfg.testcases.path);
       setTestCases(cases);
+
+      // Auto-detect OAuth; only prompts for a browser login when there is no
+      // usable cached/refreshable token. Returns null for non-OAuth servers.
+      const authSession = await createAuthSession({
+        mcpUrl: cfg.mcp.url,
+        config: cfg.mcp.oauth,
+        interactive: Boolean(process.stdout.isTTY),
+        deps: { onAuthUrl: (url) => setAuthUrl(url) },
+      });
+      setAuthUrl(null);
       setPhase('running');
 
-      let logProxyRequest: ((info: import('@bitmcp-eval/core').ProxyRequestInfo) => void) | undefined;
+      let logProxyRequest: ((info: ProxyRequestInfo) => void) | undefined;
       if (debug) {
         mkdirSync(cfg.report.outDir, { recursive: true });
         const logPath = join(cfg.report.outDir, 'bitmcp-eval-debug.log');
@@ -104,6 +117,7 @@ export default function App({ configPath, iterationsOverride, debug }: AppProps)
         config: cfg,
         testCases: cases,
         agents: cfg.run.agents.map(createAgent),
+        authProvider: authSession ? () => authSession.getAuthHeader() : undefined,
         events: {
           onProxyStarted: (url) => setProxyUrl(url),
           onProxyRequest: logProxyRequest,
@@ -186,6 +200,17 @@ export default function App({ configPath, iterationsOverride, debug }: AppProps)
       <Header title="bitmcp-eval — MCP evaluation run" />
 
       {config ? <ConfigSummary config={config} /> : <Spinner label={`Loading config from ${configPath}…`} />}
+
+      {authUrl && (
+        <Box flexDirection="column" marginY={1}>
+          <Text>
+            <Text color="yellow">⚠</Text> This MCP server requires OAuth. Opening your browser to authorize…
+          </Text>
+          <Text>
+            If it doesn&apos;t open, visit: <Text color="blue">{authUrl}</Text>
+          </Text>
+        </Box>
+      )}
 
       {config &&
         (proxyUrl ? (

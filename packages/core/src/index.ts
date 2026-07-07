@@ -31,4 +31,23 @@ export {
   type TestCaseResult,
 } from './runner.js';
 export { loadTestCases, type TestCase } from './testcase.js';
+export {
+  createAuthSession,
+  discoverOAuth,
+  interactiveLogin,
+  TokenStore,
+  generatePkce,
+  parseResourceMetadataUrl,
+  buildAuthorizeUrl,
+  exchangeCode,
+  refreshTokens,
+  registerClient,
+  type AuthSession,
+  type CreateAuthSessionOptions,
+  type LoginDeps,
+  type OAuthClientConfig,
+  type OAuthServerInfo,
+  type StoredAuth,
+  type TokenSet,
+} from './oauth.js';
 export { validateToolCalls, type CalledTool, type ToolExpectation, type ValidationResult } from './validate.js';

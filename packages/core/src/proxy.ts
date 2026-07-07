@@ -41,6 +41,13 @@ export interface ProxyOptions {
   // Any headers which we must inject to the mcp server calls?
   // E.g. authentication headers? x-api-key?
   injectionHeaders?: InjectionHeader[];
+
+  /**
+   * Supplies the `Authorization` header value per request (e.g. an OAuth
+   * bearer that refreshes over the run's lifetime). Called for every forwarded
+   * request; return undefined to send none.
+   */
+  authProvider?: () => Promise<string | undefined>;
 }
 
 type Pending = { name: string; args: unknown; startedAt: number };
@@ -133,6 +140,11 @@ export class McpRecordingProxy {
 
     for (const header of this.opts.injectionHeaders ?? []) {
       fwdHeaders[header.name.toLowerCase()] = header.value;
+    }
+
+    if (this.opts.authProvider) {
+      const auth = await this.opts.authProvider();
+      if (auth) fwdHeaders['authorization'] = auth;
     }
 
     const ac = new AbortController();

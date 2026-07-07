@@ -108,6 +108,8 @@ export interface EvalRunnerOptions {
   testCases: TestCase[];
   /** The suite is executed once per agent, in order. */
   agents: Agent[];
+  /** Supplies the Authorization header for OAuth-protected servers (see createAuthSession). */
+  authProvider?: () => Promise<string | undefined>;
   events?: RunnerEvents;
 }
 
@@ -127,6 +129,7 @@ export class EvalRunner {
     const proxy = new McpRecordingProxy({
       targetUrl: config.mcp.url,
       injectionHeaders: config.mcp.headers,
+      authProvider: this.opts.authProvider,
       onRecord: (rec) => events?.onToolCall?.(rec),
       onRequest: (info) => events?.onProxyRequest?.(info),
     });

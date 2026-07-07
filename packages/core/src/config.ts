@@ -24,6 +24,20 @@ const configSchema = z.object({
     url: z.url(),
     /** Extra headers injected into every request towards the MCP server, e.g. API keys. */
     headers: z.array(headerSchema).default([]),
+    /**
+     * OAuth is auto-detected (a 401 challenge from the server triggers a login).
+     * This block is only needed as a fallback for servers WITHOUT dynamic client
+     * registration, to supply a manually-registered client's credentials.
+     */
+    oauth: z
+      .object({
+        clientId: z.string().min(1).optional(),
+        clientSecret: z.string().min(1).optional(),
+        scopes: z.array(z.string().min(1)).optional(),
+        /** Loopback port for the OAuth redirect URI; must match the registered client. */
+        redirectPort: z.number().int().min(1).max(65535).optional(),
+      })
+      .optional(),
   }),
   testcases: z.object({
     /** Where test cases are stored. Only `filesystem` is implemented; `s3` and `git` are planned. */
@@ -109,6 +123,11 @@ export function loadConfig(path: string): EvalConfig {
   }
 
   config.mcp.headers = config.mcp.headers.map((h) => ({ name: h.name, value: interpolateEnv(h.value) }));
+  if (config.mcp.oauth) {
+    const { clientId, clientSecret } = config.mcp.oauth;
+    if (clientId) config.mcp.oauth.clientId = interpolateEnv(clientId);
+    if (clientSecret) config.mcp.oauth.clientSecret = interpolateEnv(clientSecret);
+  }
   return config;
 }
 
