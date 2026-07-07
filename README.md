@@ -92,9 +92,12 @@ expectedTools:
 
 **Validation semantics**
 
-- Every tool in `expectedTools` must be called at least once per iteration.
-- Listing a name N times means "at least N calls" — e.g. `get_forecast` twice for a
-  two-city comparison prompt.
+- Every tool in `expectedTools` must be called **successfully** at least once per
+  iteration. A call whose result is an error — a JSON-RPC error or an MCP result with
+  `isError` (e.g. an upstream 401 wrapped by the server) — does not count; it is shown in
+  the report as a failed call instead.
+- Listing a name N times means "at least N successful calls" — e.g. `get_forecast` twice
+  for a two-city comparison prompt.
 - Extra calls of expected tools are fine. Calls of unlisted tools are reported in the
   HTML report but don't fail the iteration — agents legitimately explore.
 

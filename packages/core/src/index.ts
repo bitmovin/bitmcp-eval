@@ -25,4 +25,4 @@ export {
   type TestCaseResult,
 } from './runner.js';
 export { loadTestCases, type TestCase } from './testcase.js';
-export { validateToolCalls, type ToolExpectation, type ValidationResult } from './validate.js';
+export { validateToolCalls, type CalledTool, type ToolExpectation, type ValidationResult } from './validate.js';

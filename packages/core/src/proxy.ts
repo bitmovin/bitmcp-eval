@@ -215,7 +215,7 @@ export class McpRecordingProxy {
 
   /** Match a JSON-RPC response against a pending tool call and record it. */
   private onMessage(message: unknown, pending: Map<string | number, Pending>): void {
-    const m = message as { id?: string | number; result?: unknown; error?: unknown };
+    const m = message as { id?: string | number; result?: { isError?: unknown }; error?: unknown };
     if (m?.id === undefined || !pending.has(m.id)) return;
     if (m.result === undefined && m.error === undefined) return; // not a response
 
@@ -226,7 +226,10 @@ export class McpRecordingProxy {
       id: m.id,
       name: call.name,
       args: call.args,
-      ok: m.error === undefined,
+      // MCP reports tool failures two ways: a JSON-RPC error, or a regular
+      // result flagged with isError (e.g. an upstream 401 wrapped by the
+      // server). Both mean the call did not succeed.
+      ok: m.error === undefined && m.result?.isError !== true,
       result: m.result,
       error: m.error,
       startedAt: call.startedAt,

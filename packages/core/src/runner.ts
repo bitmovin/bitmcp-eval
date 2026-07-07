@@ -239,7 +239,7 @@ export class EvalRunner {
     const validate = (): ValidationResult =>
       validateToolCalls(
         testCase.expectedTools,
-        proxy.getRecords().map((c) => c.name),
+        proxy.getRecords().map((c) => ({ name: c.name, ok: c.ok })),
       );
 
     await sendTurn(testCase.prompt);

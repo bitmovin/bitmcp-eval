@@ -6,14 +6,17 @@ import type { EvalConfig } from '../src/config.js';
 import { EvalRunner } from '../src/runner.js';
 import type { TestCase } from '../src/testcase.js';
 
-/** Fake upstream MCP server that answers every tools/call successfully. */
-function startUpstream(): Promise<{ url: string; close(): Promise<void> }> {
+/** Fake upstream MCP server; tools listed in `failingTools` answer with an MCP isError result. */
+function startUpstream(failingTools: string[] = []): Promise<{ url: string; close(): Promise<void> }> {
   const server = http.createServer(async (req, res) => {
     const chunks: Buffer[] = [];
     for await (const c of req) chunks.push(c as Buffer);
     const request = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const result = failingTools.includes(request.params?.name)
+      ? { content: [{ type: 'text', text: '401 Unauthorized' }], isError: true }
+      : { content: [] };
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ jsonrpc: '2.0', id: request.id, result: { content: [] } }));
+    res.end(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
   });
   return new Promise((resolve) => {
     server.listen(0, '127.0.0.1', () => {
@@ -105,6 +108,7 @@ describe('EvalRunner', () => {
       name: 'queryTotal',
       expected: 1,
       actual: 0,
+      failed: 0,
       satisfied: false,
     });
     expect(failedIteration.agentResponse).toBe('answered: p2');
@@ -218,8 +222,40 @@ describe('EvalRunner', () => {
       name: 'queryTotal',
       expected: 1,
       actual: 0,
+      failed: 0,
       satisfied: false,
     });
+  });
+
+  it('fails an iteration whose expected tool calls all errored, even though they happened', async () => {
+    // Real-world regression: expected tools were called but every call failed
+    // (401 / invalid uuid wrapped as MCP isError) and the iteration passed.
+    const upstream = await startUpstream(['peekAllLicenses', 'queryTotal']);
+    cleanups.push(upstream.close);
+
+    const agent = scriptedAgent({ p3: ['peekAllLicenses', 'queryTotal', 'searchMetrics'] });
+    const testCase: TestCase = {
+      name: 'all expected calls fail',
+      prompt: 'p3',
+      expectedTools: ['peekAllLicenses', 'queryTotal'],
+      answers: [],
+      file: '/t/p3.yaml',
+    };
+
+    const runner = new EvalRunner({ config: makeConfig(upstream.url, 1), testCases: [testCase], agents: [agent] });
+    const report = await runner.run();
+    const iteration = report.results[0].iterations[0];
+
+    expect(iteration.passed).toBe(false);
+    expect(iteration.toolCalls.map((c) => `${c.name}:${c.ok}`)).toEqual([
+      'peekAllLicenses:false',
+      'queryTotal:false',
+      'searchMetrics:true',
+    ]);
+    expect(iteration.validation.expectations).toEqual([
+      { name: 'peekAllLicenses', expected: 1, actual: 0, failed: 1, satisfied: false },
+      { name: 'queryTotal', expected: 1, actual: 0, failed: 1, satisfied: false },
+    ]);
   });
 
   it('runs the whole suite once per agent and reports per-agent totals', async () => {

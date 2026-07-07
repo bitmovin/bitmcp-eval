@@ -27,7 +27,7 @@ function sampleReport(): EvalRunReport {
             passed: true,
             validation: {
               passed: true,
-              expectations: [{ name: 'get_current_weather', expected: 1, actual: 1, satisfied: true }],
+              expectations: [{ name: 'get_current_weather', expected: 1, actual: 1, failed: 0, satisfied: true }],
               unexpectedTools: [],
             },
             toolCalls: [
@@ -50,7 +50,7 @@ function sampleReport(): EvalRunReport {
             passed: false,
             validation: {
               passed: false,
-              expectations: [{ name: 'get_current_weather', expected: 1, actual: 0, satisfied: false }],
+              expectations: [{ name: 'get_current_weather', expected: 1, actual: 0, failed: 2, satisfied: false }],
               unexpectedTools: ['list_supported_cities'],
             },
             toolCalls: [],
@@ -86,9 +86,16 @@ describe('renderHtmlReport', () => {
     expect(html).not.toContain('<script>alert');
   });
 
-  it('shows missing tool expectations with counts', () => {
+  it('shows missing tool expectations with success and failure counts', () => {
     const html = renderHtmlReport(sampleReport());
-    expect(html).toContain('(0/1)');
+    expect(html).toContain('(0/1, 2 failed)');
+  });
+
+  it('marks failed tool calls in the call chips', () => {
+    const withFailedCall = sampleReport();
+    withFailedCall.results[0].iterations[0].toolCalls[0].ok = false;
+    const html = renderHtmlReport(withFailedCall);
+    expect(html).toContain('class="tool error"');
   });
 
   it('renders the full conversation for multi-turn iterations', () => {

@@ -58,6 +58,7 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
   .tools { display: flex; gap: .3rem; flex-wrap: wrap; }
   .tool { background: #eef2ff; border-radius: 4px; padding: 0 .4rem; font-size: .75rem; font-family: ui-monospace, monospace; }
   .tool.missing { background: #fee2e2; text-decoration: line-through; }
+  .tool.error { background: #fee2e2; }
   .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: .6rem 1rem; margin: 1rem 0; font-size: .9rem; }
   .banner.aborted { background: #fee2e2; border-color: #b91c1c; }
 </style>
@@ -178,12 +179,19 @@ function renderIteration(it: IterationResult, key: string): string {
   const badge = it.passed ? '<span class="badge pass">passed</span>' : '<span class="badge fail">failed</span>';
 
   const calls = it.toolCalls.length
-    ? `<div class="tools">${it.toolCalls.map((c) => `<span class="tool">${esc(c.name)}</span>`).join(' ')}</div>`
+    ? `<div class="tools">${it.toolCalls
+        .map((c) => `<span class="tool${c.ok ? '' : ' error'}">${esc(c.name)}${c.ok ? '' : ' &#10007;'}</span>`)
+        .join(' ')}</div>`
     : '<span class="muted">none</span>';
 
   const missing = it.validation.expectations
     .filter((e) => !e.satisfied)
-    .map((e) => `<span class="tool missing">${esc(e.name)} (${e.actual}/${e.expected})</span>`)
+    .map(
+      (e) =>
+        `<span class="tool missing">${esc(e.name)} (${e.actual}/${e.expected}${
+          e.failed ? `, ${e.failed} failed` : ''
+        })</span>`,
+    )
     .join(' ');
 
   const details: string[] = [];

@@ -10,7 +10,7 @@ interface FakeUpstream {
 }
 
 /** A fake MCP server answering every tools/call with a canned JSON-RPC response. */
-function startFakeUpstream(mode: 'json' | 'sse'): Promise<FakeUpstream> {
+function startFakeUpstream(mode: 'json' | 'sse' | 'tool-error'): Promise<FakeUpstream> {
   const seenHeaders: http.IncomingHttpHeaders[] = [];
   const server = http.createServer(async (req, res) => {
     seenHeaders.push(req.headers);
@@ -20,7 +20,10 @@ function startFakeUpstream(mode: 'json' | 'sse'): Promise<FakeUpstream> {
     const response = {
       jsonrpc: '2.0',
       id: request.id,
-      result: { content: [{ type: 'text', text: 'sunny, 24°C' }] },
+      result:
+        mode === 'tool-error'
+          ? { content: [{ type: 'text', text: '401 Unauthorized' }], isError: true }
+          : { content: [{ type: 'text', text: 'sunny, 24°C' }] },
     };
 
     if (mode === 'json') {
@@ -61,7 +64,7 @@ describe('McpRecordingProxy', () => {
     while (cleanups.length) await cleanups.pop()!();
   });
 
-  async function setup(mode: 'json' | 'sse', injectionHeaders?: { name: string; value: string }[]) {
+  async function setup(mode: 'json' | 'sse' | 'tool-error', injectionHeaders?: { name: string; value: string }[]) {
     const upstream = await startFakeUpstream(mode);
     cleanups.push(upstream.close);
     const records: ToolCallRecord[] = [];
@@ -123,6 +126,19 @@ describe('McpRecordingProxy', () => {
     });
 
     expect(upstream.seenHeaders[0]['x-api-key']).toBe('secret-123');
+  });
+
+  it('records MCP tool-level errors (result.isError) as failed calls', async () => {
+    const { records, proxyUrl } = await setup('tool-error');
+
+    await fetch(proxyUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: toolsCallBody(9, 'peekAllLicenses', {}),
+    });
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ name: 'peekAllLicenses', ok: false });
   });
 
   it('ignores non-tool-call messages', async () => {
