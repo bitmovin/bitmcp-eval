@@ -177,6 +177,48 @@ describe('McpRecordingProxy', () => {
     expect(records).toHaveLength(0);
   });
 
+  it('survives the agent dropping a long-lived SSE stream (no crash) and keeps serving', async () => {
+    // Upstream opens an SSE stream and never ends it — like an MCP GET channel.
+    const openStreams: http.ServerResponse[] = [];
+    const upstream = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(': open\n\n');
+      openStreams.push(res); // held open on purpose
+    });
+    await new Promise<void>((r) => upstream.listen(0, '127.0.0.1', r));
+    const upstreamUrl = `http://127.0.0.1:${(upstream.address() as AddressInfo).port}/mcp`;
+    cleanups.push(
+      () =>
+        new Promise((r) => {
+          openStreams.forEach((s) => s.destroy());
+          upstream.close(() => r());
+        }),
+    );
+
+    const proxy = new McpRecordingProxy({ targetUrl: upstreamUrl });
+    const { url } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    // Open the stream through the proxy, then abort it (agent disconnects).
+    const ac = new AbortController();
+    const streamed = await fetch(url, { method: 'GET', headers: { accept: 'text/event-stream' }, signal: ac.signal });
+    expect(streamed.status).toBe(200);
+    ac.abort();
+    await streamed.body?.cancel().catch(() => undefined);
+
+    // Give the abort→error path a tick to fire; the process must still be alive.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Proxy still works for a subsequent request.
+    const again = await fetch(url, {
+      method: 'GET',
+      headers: { accept: 'text/event-stream' },
+      signal: AbortSignal.timeout(500),
+    }).catch(() => undefined);
+    expect(again?.status).toBe(200);
+    again?.body?.cancel().catch(() => undefined);
+  });
+
   it('clear() resets the recorded calls', async () => {
     const { proxy, proxyUrl } = await setup('json');
     await fetch(proxyUrl, {

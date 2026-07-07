@@ -82,9 +82,17 @@ export class McpRecordingProxy {
   async start(): Promise<{ port: number; url: string }> {
     const target = new URL(this.opts.targetUrl);
     this.server = http.createServer((req, res) => {
+      // Agents open long-lived GET/SSE channels and drop them at will; writing
+      // to a socket the client already closed emits 'error' — swallow it rather
+      // than crash the proxy (and with it the whole run).
+      res.on('error', () => {});
       this.handle(req, res, target).catch(() => {
-        if (!res.headersSent) res.writeHead(502);
-        res.end();
+        try {
+          if (!res.headersSent) res.writeHead(502);
+          if (!res.writableEnded) res.end();
+        } catch {
+          /* client already gone */
+        }
       });
     });
 
@@ -183,7 +191,12 @@ export class McpRecordingProxy {
     if (ctype.includes('text/event-stream')) {
       // SSE: tee — one branch to the agent untouched, one branch we parse.
       const [toClient, toParse] = upstream.body.tee();
-      Readable.fromWeb(toClient as import('node:stream/web').ReadableStream).pipe(res);
+      const clientStream = Readable.fromWeb(toClient as import('node:stream/web').ReadableStream);
+      // When the agent drops the stream we abort upstream, which makes this
+      // stream emit AbortError. Swallow it — an unhandled 'error' here would
+      // otherwise take the whole process down.
+      clientStream.on('error', () => res.destroy());
+      clientStream.pipe(res);
       await this.parseSse(toParse, pending);
     } else {
       // Single JSON response: buffer, forward, parse.
