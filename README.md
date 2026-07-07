@@ -37,6 +37,10 @@ locally or remote, with authentication headers injected transparently.
   - [Claude Code](https://claude.com/claude-code) (`claude`) — the default; tested with 2.1.x
   - [OpenAI Codex](https://github.com/openai/codex) (`codex`, `npm install -g @openai/codex`) —
     tested with 0.142.x; select via `run.agents: [codex]` or run both for comparison
+- **The MCP server you want to evaluate**, reachable over StreamableHTTP (running locally
+  or remote, auth headers supported). The bundled demo weather server exists only to
+  verify your toolchain setup end-to-end — evaluating it tells you nothing about your own
+  server's tool design.
 
 > **Cost note:** every iteration is a real agent conversation billed against your
 > Anthropic/OpenAI account or subscription quota. A run executes
