@@ -18,6 +18,15 @@ export interface IterationResult {
   passed: boolean;
   validation: ValidationResult;
   toolCalls: ToolCallRecord[];
+  /**
+   * Ways the agent left the MCP binding (shell commands, web searches) —
+   * reported by agents that cannot be hard-restricted (codex). Escapes do not
+   * fail an iteration by themselves: answering *instead of* calling the
+   * expected tools already fails validation, while e.g. shell-based math on
+   * top of proper tool results is legitimate. They are surfaced so failed
+   * bindings are explainable at a glance.
+   */
+  escapes: string[];
   /** The full conversation: initial prompt plus any scripted answers that were needed. */
   turns: ConversationTurn[];
   /** The agent's final answer, when it produced one. */
@@ -186,6 +195,7 @@ export class EvalRunner {
   ): Promise<IterationResult> {
     const started = performance.now();
     const turns: ConversationTurn[] = [];
+    const escapes: string[] = [];
     let error: string | undefined;
 
     const sendTurn = async (message: string): Promise<void> => {
@@ -194,6 +204,7 @@ export class EvalRunner {
       try {
         const result = await session.send(message);
         turn.response = result.text;
+        escapes.push(...(result.escapes ?? []));
         if (result.isError) {
           error = `Agent reported an error result: ${result.text}`;
         }
@@ -223,6 +234,7 @@ export class EvalRunner {
       passed: validation.passed && error === undefined,
       validation,
       toolCalls,
+      escapes,
       turns,
       agentResponse: turns[turns.length - 1]?.response,
       error,

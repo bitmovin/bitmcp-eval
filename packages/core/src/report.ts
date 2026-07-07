@@ -161,6 +161,13 @@ function renderIteration(it: IterationResult, key: string): string {
 
   const details: string[] = [];
   if (missing) details.push(`<div class="tools">missing:&nbsp;${missing}</div>`);
+  if (it.escapes.length) {
+    details.push(
+      `<details data-key="${key}-esc"><summary>&#9888; Left the MCP binding (${it.escapes.length}×)</summary>${it.escapes
+        .map((e) => `<pre>${esc(e)}</pre>`)
+        .join('')}</details>`,
+    );
+  }
   if (it.error)
     details.push(
       `<details data-key="${key}-error"><summary class="fail">Error</summary><pre>${esc(it.error)}</pre></details>`,

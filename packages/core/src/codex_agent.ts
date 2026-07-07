@@ -106,19 +106,21 @@ class CodexExecSession implements AgentSession {
 
     const parsed = parseCodexJsonl(stdout);
     this.sessionId = parsed.sessionId ?? this.sessionId;
-    return { text: parsed.text, isError: parsed.isError };
+    return { text: parsed.text, isError: parsed.isError, escapes: parsed.escapes };
   }
 }
 
 /**
  * Parses `codex exec --json` JSONL events: the thread id from
- * `thread.started`, the last `agent_message` as the turn's answer, and
- * `error` / `turn.failed` events as failures.
+ * `thread.started`, the last `agent_message` as the turn's answer,
+ * `error` / `turn.failed` events as failures, and `command_execution` /
+ * `web_search` items as escapes from the MCP binding.
  */
 export function parseCodexJsonl(stdout: string): AgentTurnResult & { sessionId?: string } {
   let sessionId: string | undefined;
   let lastMessage: string | undefined;
   let errorMessage: string | undefined;
+  const escapes: string[] = [];
 
   for (const line of stdout.split('\n')) {
     const trimmed = line.trim();
@@ -133,9 +135,13 @@ export function parseCodexJsonl(stdout: string): AgentTurnResult & { sessionId?:
     if (event.type === 'thread.started' && typeof event.thread_id === 'string') {
       sessionId = event.thread_id;
     } else if (event.type === 'item.completed') {
-      const item = event.item as { type?: string; text?: string } | undefined;
+      const item = event.item as { type?: string; text?: string; command?: string; query?: string } | undefined;
       if (item?.type === 'agent_message' && typeof item.text === 'string') {
         lastMessage = item.text;
+      } else if (item?.type === 'command_execution') {
+        escapes.push(`shell: ${truncate(item.command ?? '(unknown command)')}`);
+      } else if (item?.type === 'web_search') {
+        escapes.push(`web search: ${truncate(item.query ?? '(unknown query)')}`);
       }
     } else if (event.type === 'error' && typeof event.message === 'string') {
       errorMessage = event.message;
@@ -145,7 +151,11 @@ export function parseCodexJsonl(stdout: string): AgentTurnResult & { sessionId?:
   }
 
   if (lastMessage !== undefined) {
-    return { text: lastMessage, isError: false, sessionId };
+    return { text: lastMessage, isError: false, sessionId, escapes };
   }
-  return { text: errorMessage ?? stdout.trim(), isError: errorMessage !== undefined, sessionId };
+  return { text: errorMessage ?? stdout.trim(), isError: errorMessage !== undefined, sessionId, escapes };
+}
+
+function truncate(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

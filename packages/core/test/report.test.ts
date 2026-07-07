@@ -39,6 +39,7 @@ function sampleReport(): EvalRunReport {
                 durationMs: 42,
               },
             ],
+            escapes: [],
             turns: [{ message: 'What is the weather in Vienna?', response: 'It is sunny.' }],
             agentResponse: 'It is sunny.',
             durationMs: 9000,
@@ -52,6 +53,7 @@ function sampleReport(): EvalRunReport {
               unexpectedTools: ['list_supported_cities'],
             },
             toolCalls: [],
+            escapes: ['web search: current weather Vienna'],
             turns: [
               { message: 'What is the weather in Vienna?', response: 'Which city do you mean exactly?' },
               { message: 'Vienna, Austria', response: 'I could not find out.' },
@@ -115,6 +117,12 @@ describe('renderHtmlReport', () => {
     expect(html).toContain('Run aborted');
     expect(html).toContain('1 of 7 test cases were finished');
     expect(html).not.toContain('http-equiv="refresh"');
+  });
+
+  it('surfaces escapes from the MCP binding', () => {
+    const html = renderHtmlReport(sampleReport());
+    expect(html).toContain('Left the MCP binding (1×)');
+    expect(html).toContain('web search: current weather Vienna');
   });
 
   it('details sections carry stable keys and the state-restore script', () => {

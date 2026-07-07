@@ -19,6 +19,7 @@ describe('parseCodexJsonl', () => {
       text: 'It is 24°C and sunny in Vienna.',
       isError: false,
       sessionId: '019f3b15-02b1-7620-a35f-6abae4fcf709',
+      escapes: [],
     });
   });
 
@@ -28,6 +29,21 @@ describe('parseCodexJsonl', () => {
       text: 'stream disconnected',
       isError: true,
       sessionId: '019f3b15-02b1-7620-a35f-6abae4fcf709',
+      escapes: [],
+    });
+  });
+
+  it('detects shell and web-search escapes from the MCP binding', () => {
+    const stdout = [
+      THREAD,
+      '{"type":"item.completed","item":{"id":"item_0","type":"web_search","query":"weather: Vienna, Austria"}}',
+      '{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"curl -s wttr.in/Vienna?format=3"}}',
+      '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"It is 22°C."}}',
+    ].join('\n');
+
+    expect(parseCodexJsonl(stdout)).toMatchObject({
+      text: 'It is 22°C.',
+      escapes: ['web search: weather: Vienna, Austria', 'shell: curl -s wttr.in/Vienna?format=3'],
     });
   });
 

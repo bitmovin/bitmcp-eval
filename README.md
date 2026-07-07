@@ -184,6 +184,11 @@ Caveats inherent to today's codex CLI:
   the `AGENTS.md` guardrail steers away from it, but that is instruction, not
   enforcement. **Only evaluate trusted test cases against trusted MCP servers, or run
   the harness in a container.**
+- Because it cannot be hard-restricted, every shell command and web search codex performs
+  is recorded as an **escape from the MCP binding** and shown per iteration in the HTML
+  report ("⚠ Left the MCP binding"). Escapes don't fail an iteration by themselves —
+  answering _instead of_ calling the expected tools already fails validation, while e.g.
+  shell-based math on top of proper tool results is legitimate.
 - codex has no isolation flag equivalent to `--strict-mcp-config` (its
   `--ignore-user-config` also drops the override that injects the proxy), so MCP servers
   from your own `~/.codex/config.toml` stay visible to the agent during the eval. Keep the

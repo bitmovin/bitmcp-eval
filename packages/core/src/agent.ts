@@ -35,6 +35,12 @@ export interface AgentTurnResult {
   text: string;
   /** True when the agent itself reported an error result. */
   isError: boolean;
+  /**
+   * Ways the agent left the MCP binding during this turn (shell commands,
+   * web searches). Claude is hard-restricted and never reports any; codex
+   * cannot be hard-restricted, so its escapes are detected and surfaced.
+   */
+  escapes?: string[];
 }
 
 /**
