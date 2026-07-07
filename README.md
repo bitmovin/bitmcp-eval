@@ -155,6 +155,8 @@ yarn start -c eval.yaml -i 10    # override iterations from the CLI
 yarn start -c eval.yaml --debug  # additionally log every proxied request's headers
 #                                  to <report.outDir>/bitmcp-eval-debug.log — useful for
 #                                  diagnosing auth issues. Contains secrets, do not share.
+yarn start login -c eval.yaml    # OAuth servers only: authorize + cache a token up front
+#                                  (see "OAuth-protected MCP servers" below)
 ```
 
 The process exits non-zero when the run itself fails (bad config, unreachable server).
@@ -221,25 +223,59 @@ Caveats inherent to today's codex CLI:
 
 ## OAuth-protected MCP servers
 
-Most hosted MCP servers require OAuth. bitmcp-eval **auto-detects** this: if the server
-answers the initial request with a `401` challenge, the harness runs an OAuth login and
-then injects the resulting bearer token on every proxied request — the chat agent never
-touches OAuth.
+Most hosted MCP servers sit behind OAuth. bitmcp-eval handles this **automatically** — you
+never configure endpoints or paste tokens. The chat agent stays entirely out of the OAuth
+loop; the recording proxy is the authenticated client and injects the bearer token on every
+request it forwards.
+
+### How it works, end to end
+
+1. **Detect.** At the start of every run the harness probes the MCP server. A normal
+   response → no OAuth, nothing happens. A `401` challenge → OAuth is required, and the
+   harness follows the advertised metadata (protected-resource → authorization-server) to
+   discover the endpoints.
+2. **Authorize (once).** If there is no usable token yet, the harness runs the standard
+   OAuth **authorization-code + PKCE** flow: it opens your browser to the provider's login
+   page and waits on a local loopback listener (`http://127.0.0.1:8765/callback`) for the
+   redirect. You log in as yourself; the harness exchanges the code for an access token
+   (and a refresh token).
+3. **Cache.** The tokens are written to `~/.bitmcp-eval/tokens/` (file mode `0600`), keyed
+   by authorization-server + resource — so one login serves **every** config pointing at
+   that server, and survives across runs and restarts.
+4. **Inject.** For the whole run the proxy adds `Authorization: Bearer <token>` to each
+   request forwarded to the MCP server. The agent only ever talks plain HTTP to the proxy.
+5. **Refresh.** When the access token nears expiry the proxy refreshes it silently
+   (using the refresh token) and keeps going — so a long run outlives a short-lived access
+   token without interruption.
+
+### The `login` command
+
+You can perform step 2 ahead of time instead of waiting for a run to prompt you:
 
 ```sh
-# Log in once (opens your browser); the token is cached and refreshed automatically.
-yarn start login -c eval.yaml
-
-# Normal runs then just work — and will prompt for login on their own if no
-# valid token is cached and the terminal is interactive.
-yarn start -c eval.yaml
+yarn start login -c eval.yaml     # or, if installed globally: bitmcp-eval login -c eval.yaml
 ```
 
-- **Dynamic client registration (DCR):** if the server supports it (most do), no config is
-  needed at all — the harness registers its own client on the fly.
-- **No DCR:** register an OAuth client yourself, allow the redirect URI
+This runs discovery + browser login for the server in that config and caches the token,
+printing `✅ Authorized. Token cached`. It's a no-op that says so if the server doesn't use
+OAuth. Use it to:
+
+- **pre-warm** before a long run, so the run starts immediately; or
+- **authorize for CI / headless machines** — run `login` once somewhere with a browser,
+  and unattended runs then reuse and refresh the cached token.
+
+A plain `yarn start -c eval.yaml` does the same login on demand: if the terminal is
+interactive and no valid token is cached, it opens the browser itself. In a
+non-interactive context with no cached token it fails fast with
+`OAuth login required … Run \`bitmcp-eval login\` first` rather than hanging.
+
+### Client registration
+
+- **Dynamic client registration (DCR)** — supported by most servers, including the Bitmovin
+  MCP: **no config needed at all.** The harness registers its own OAuth client on the fly.
+- **No DCR** — register an OAuth client yourself, allow-list the redirect URI
   `http://127.0.0.1:8765/callback` (change the port with `mcp.oauth.redirectPort`), and
-  supply its credentials:
+  supply its credentials in the config:
 
   ```yaml
   mcp:
@@ -251,14 +287,21 @@ yarn start -c eval.yaml
       # redirectPort: 8765
   ```
 
-Tokens are cached per authorization-server + resource under `~/.bitmcp-eval/tokens/`
-(mode `0600`), so one login serves every config pointing at that server, and access tokens
-are refreshed silently mid-run. For CI, run `bitmcp-eval login` once on a machine with a
-browser; non-interactive runs reuse and refresh the cached token, and fail with a clear
-message if none exists.
+Note `mcp.oauth` is **only** the no-DCR fallback — OAuth itself is always auto-detected, so
+DCR servers need no `oauth` block.
 
-> Already have a token by other means? OAuth is just a header — you can skip all of the
-> above and set `Authorization: Bearer ${TOKEN}` under `mcp.headers` instead.
+### Managing cached tokens
+
+Tokens live as one JSON file per server under `~/.bitmcp-eval/tokens/`. To force a fresh
+login (e.g. to switch accounts or after revoking access), delete the cache and log in
+again:
+
+```sh
+rm -rf ~/.bitmcp-eval/tokens && yarn start login -c eval.yaml
+```
+
+> Already have a token by other means? OAuth is ultimately just a header — you can bypass
+> all of the above and set `Authorization: Bearer ${TOKEN}` under `mcp.headers` instead.
 
 ## How it works
 
