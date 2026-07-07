@@ -29,10 +29,19 @@ locally or remote, with authentication headers injected transparently.
 
 ## Requirements
 
+- macOS or Linux (Windows is untested)
 - Node.js ≥ 20 with corepack enabled (Yarn Berry)
-- A chat agent CLI, installed and authenticated:
-  - [Claude Code](https://claude.com/claude-code) (`claude`) — the default, or
-  - [OpenAI Codex](https://github.com/openai/codex) (`codex`) — select via `run.agents: [codex]` or run both for comparison
+- A chat agent CLI, installed and authenticated — a **recent version**, since the harness
+  relies on newer flags (claude: `--strict-mcp-config`, headless `--resume`; codex:
+  `exec resume`, `--json`):
+  - [Claude Code](https://claude.com/claude-code) (`claude`) — the default; tested with 2.1.x
+  - [OpenAI Codex](https://github.com/openai/codex) (`codex`, `npm install -g @openai/codex`) —
+    tested with 0.142.x; select via `run.agents: [codex]` or run both for comparison
+
+> **Cost note:** every iteration is a real agent conversation billed against your
+> Anthropic/OpenAI account or subscription quota. A run executes
+> `test cases × iterations × agents` conversations — plus one extra turn per scripted
+> answer that gets used.
 
 ## Quickstart (2 minutes, bundled demo server)
 
