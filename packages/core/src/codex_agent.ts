@@ -69,30 +69,14 @@ class CodexExecSession implements AgentSession {
   }
 
   async send(message: string): Promise<AgentTurnResult> {
-    const args = ['exec'];
-    if (this.sessionId !== undefined) {
-      args.push('resume', this.sessionId);
-    }
-    args.push(
-      message,
-      '--json',
-      '--color',
-      'never',
-      '--skip-git-repo-check',
-      '--dangerously-bypass-approvals-and-sandbox',
-      '-C',
-      this.workDir,
-      '-c',
-      `mcp_servers.${MCP_SERVER_ALIAS}.url="${this.mcpUrl}"`,
-      // Keep the eval clean: without this, codex happily answers via its
-      // built-in web search instead of the MCP server under test.
-      '-c',
-      'web_search="disabled"',
-    );
+    const args = buildCodexExecArgs(message, this.mcpUrl, this.sessionId);
 
     let stdout: string;
     try {
+      // cwd (not `-C`) pins the working directory: `codex exec resume` does
+      // not accept `-C`, but both invocations honor the process cwd.
       const invocation = execFileAsync('codex', args, {
+        cwd: this.workDir,
         timeout: this.options?.timeoutMs,
         maxBuffer: 64 * 1024 * 1024,
       });
@@ -108,6 +92,31 @@ class CodexExecSession implements AgentSession {
     this.sessionId = parsed.sessionId ?? this.sessionId;
     return { text: parsed.text, isError: parsed.isError, escapes: parsed.escapes };
   }
+}
+
+/**
+ * Builds the argv for one codex turn. Kept minimal on purpose: `codex exec
+ * resume` accepts a strict subset of `codex exec`'s flags (no `--color`, no
+ * `-C`), so only flags valid for BOTH invocations may appear here.
+ */
+export function buildCodexExecArgs(message: string, mcpUrl: string, sessionId?: string): string[] {
+  const args = ['exec'];
+  if (sessionId !== undefined) {
+    args.push('resume', sessionId);
+  }
+  args.push(
+    message,
+    '--json',
+    '--skip-git-repo-check',
+    '--dangerously-bypass-approvals-and-sandbox',
+    '-c',
+    `mcp_servers.${MCP_SERVER_ALIAS}.url="${mcpUrl}"`,
+    // Keep the eval clean: without this, codex happily answers via its
+    // built-in web search instead of the MCP server under test.
+    '-c',
+    'web_search="disabled"',
+  );
+  return args;
 }
 
 /**
