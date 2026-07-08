@@ -127,18 +127,33 @@ export async function judgeIteration(
   }
 }
 
-/** Parses the model's JSON verdict, tolerating code fences and prose padding. Exported for tests. */
+/**
+ * Parses the model's JSON verdict, tolerating code fences, prose padding, and
+ * verdict spelling variants ("Pass", "FAILED", …). Normalization matters: a
+ * verdict that fell through to `error` would never be compared against the
+ * mechanical result, silently losing its disagreement marker. Exported for tests.
+ */
 export function parseVerdict(content: string): Pick<JudgeResult, 'verdict' | 'reasoning'> {
   const jsonText = /\{[\s\S]*\}/.exec(content.replace(/```(?:json)?/g, ''))?.[0];
   if (jsonText) {
     try {
       const parsed = JSON.parse(jsonText) as { verdict?: string; reasoning?: string };
-      if (parsed.verdict === 'pass' || parsed.verdict === 'fail' || parsed.verdict === 'uncertain') {
-        return { verdict: parsed.verdict, reasoning: clip(parsed.reasoning ?? '(no reasoning given)', 2000) };
+      const verdict = normalizeVerdict(parsed.verdict);
+      if (verdict) {
+        return { verdict, reasoning: clip(parsed.reasoning ?? '(no reasoning given)', 2000) };
       }
     } catch {
       /* fall through */
     }
   }
   return { verdict: 'error', reasoning: `Judge produced unparseable output: ${clip(content, 300)}` };
+}
+
+function normalizeVerdict(raw: unknown): 'pass' | 'fail' | 'uncertain' | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const v = raw.trim().toLowerCase();
+  if (v === 'pass' || v === 'passed' || v === 'passing') return 'pass';
+  if (v === 'fail' || v === 'failed' || v === 'failing') return 'fail';
+  if (v === 'uncertain' || v === 'unsure' || v === 'unknown' || v === 'inconclusive') return 'uncertain';
+  return undefined;
 }

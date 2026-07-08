@@ -89,6 +89,16 @@ describe('parseVerdict', () => {
     expect(out.verdict).toBe('fail');
   });
 
+  it('normalizes verdict spelling variants so disagreements are never lost', () => {
+    // "Passed" previously became verdict "error", which is excluded from the
+    // disagreement comparison — a real contradiction then rendered unmarked.
+    expect(parseVerdict('{"verdict":"Passed","reasoning":"x"}').verdict).toBe('pass');
+    expect(parseVerdict('{"verdict":"FAIL","reasoning":"x"}').verdict).toBe('fail');
+    expect(parseVerdict('{"verdict":"failed","reasoning":"x"}').verdict).toBe('fail');
+    expect(parseVerdict('{"verdict":" Uncertain ","reasoning":"x"}').verdict).toBe('uncertain');
+    expect(parseVerdict('{"verdict":"inconclusive","reasoning":"x"}').verdict).toBe('uncertain');
+  });
+
   it('returns error verdict for garbage output', () => {
     expect(parseVerdict('I think it went well overall.').verdict).toBe('error');
     expect(parseVerdict('{"verdict":"excellent"}').verdict).toBe('error');
