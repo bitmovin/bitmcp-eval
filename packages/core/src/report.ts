@@ -221,10 +221,16 @@ function renderIteration(it: IterationResult, key: string): string {
             ? 'uncertain'
             : 'judge-error';
     const disagrees = judgeDisagrees(it.passed, j);
+    // Definitive verdicts always get an explicit agree/disagree statement so a
+    // missing disagreement marker can never be mistaken for an oversight.
+    const comparison = disagrees
+      ? ' <b>&#9878; disagrees with the tool-based result</b>'
+      : j.verdict === 'pass' || j.verdict === 'fail'
+        ? ' <span class="muted">(agrees with the tool-based result)</span>'
+        : ' <span class="muted">(no definitive verdict — not compared)</span>';
     details.push(
       `<div class="judge"><span class="who">LLM judge${j.model ? ` (${esc(j.model)})` : ''}:</span> ` +
-        `<span class="badge ${badgeClass}">${esc(j.verdict)}</span>` +
-        `${disagrees ? ' <b>&#9878; disagrees with the tool-based result</b>' : ''}<br>${esc(j.reasoning)}</div>`,
+        `<span class="badge ${badgeClass}">${esc(j.verdict)}</span>${comparison}<br>${esc(j.reasoning)}</div>`,
     );
   }
   if (it.escapes.length) {
