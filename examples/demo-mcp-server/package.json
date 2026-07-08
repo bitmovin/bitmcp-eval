@@ -1,0 +1,24 @@
+{
+  "name": "@bitmcp-eval/demo-mcp-server",
+  "version": "1.0.0",
+  "description": "Small StreamableHTTP MCP server with deterministic weather tools, used to demo and test bitmcp-eval",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "clean": "true",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^5.1.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.10.11",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,178 @@
+import { execFile } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import {
+  AgentInvocationError,
+  MCP_SERVER_ALIAS,
+  makeNeutralWorkDir,
+  removeNeutralWorkDir,
+  type Agent,
+  type AgentSession,
+  type AgentSessionOptions,
+  type AgentTurnResult,
+} from './agent.js';
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * Steers codex towards the server under test. Unlike claude's
+ * `--allowedTools`, codex offers no way to *enforce* this (its shell tool
+ * cannot be disabled by config), so instructions are the strongest available
+ * lever — see the caveats on {@link CodexExecAgent}.
+ */
+const CODEX_GUARDRAILS = `You are being evaluated on how you use the tools of the MCP server "${MCP_SERVER_ALIAS}".
+Answer user questions exclusively with the MCP tools of the "${MCP_SERVER_ALIAS}" server.
+Never answer from your own knowledge, never run shell commands, never use ChatGPT apps/connectors/plugins or any other MCP server, and never fetch data from the network in any other way.
+`;
+
+/**
+ * Runs conversations through the OpenAI Codex CLI (`codex exec`).
+ *
+ * Each turn is one headless invocation; follow-up turns resume the same
+ * session via `codex exec resume <thread-id>`. The proxy URL is injected as
+ * an MCP server through a `-c` config override.
+ *
+ * Caveats (state of codex-cli 0.142):
+ * - `--dangerously-bypass-approvals-and-sandbox` is required: in exec mode
+ *   every MCP tool call hits an interactive approval prompt that is
+ *   auto-cancelled headlessly (openai/codex#16685, #24135). This also lifts
+ *   the sandbox for shell commands the agent may run — only evaluate trusted
+ *   test cases, or run the harness in a container.
+ * - Unlike claude's `--strict-mcp-config` there is no isolation flag that
+ *   keeps `-c` overrides working, so MCP servers from the user's own
+ *   `~/.codex/config.toml` remain visible to the agent during the eval.
+ */
+export class CodexExecAgent implements Agent {
+  readonly name = 'codex';
+
+  createSession(mcpUrl: string, options?: AgentSessionOptions): AgentSession {
+    return new CodexExecSession(mcpUrl, options);
+  }
+}
+
+class CodexExecSession implements AgentSession {
+  private sessionId?: string;
+  /** Neutral cwd (with guardrail AGENTS.md) so the eval never inherits the caller's project context. */
+  private readonly workDir: string;
+
+  constructor(
+    private readonly mcpUrl: string,
+    private readonly options?: AgentSessionOptions,
+  ) {
+    this.workDir = makeNeutralWorkDir('codex');
+    writeFileSync(join(this.workDir, 'AGENTS.md'), CODEX_GUARDRAILS);
+  }
+
+  close(): void {
+    removeNeutralWorkDir(this.workDir);
+  }
+
+  async send(message: string): Promise<AgentTurnResult> {
+    const args = buildCodexExecArgs(message, this.mcpUrl, this.sessionId);
+
+    let stdout: string;
+    try {
+      // cwd (not `-C`) pins the working directory: `codex exec resume` does
+      // not accept `-C`, but both invocations honor the process cwd.
+      const invocation = execFileAsync('codex', args, {
+        cwd: this.workDir,
+        timeout: this.options?.timeoutMs,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      // codex exec treats piped stdin as extra prompt input and blocks until
+      // EOF — close it right away or every turn hangs until the timeout.
+      invocation.child.stdin?.end();
+      ({ stdout } = await invocation);
+    } catch (err) {
+      throw new AgentInvocationError('codex', err);
+    }
+
+    const parsed = parseCodexJsonl(stdout);
+    this.sessionId = parsed.sessionId ?? this.sessionId;
+    return { text: parsed.text, isError: parsed.isError, escapes: parsed.escapes };
+  }
+}
+
+/**
+ * Builds the argv for one codex turn. Kept minimal on purpose: `codex exec
+ * resume` accepts a strict subset of `codex exec`'s flags (no `--color`, no
+ * `-C`), so only flags valid for BOTH invocations may appear here.
+ */
+export function buildCodexExecArgs(message: string, mcpUrl: string, sessionId?: string): string[] {
+  const args = ['exec'];
+  if (sessionId !== undefined) {
+    args.push('resume', sessionId);
+  }
+  args.push(
+    message,
+    '--json',
+    '--skip-git-repo-check',
+    '--dangerously-bypass-approvals-and-sandbox',
+    '-c',
+    `mcp_servers.${MCP_SERVER_ALIAS}.url="${mcpUrl}"`,
+    // Keep the eval clean: without this, codex happily answers via its
+    // built-in web search instead of the MCP server under test.
+    '-c',
+    'web_search="disabled"',
+    // ... or via ChatGPT apps/connectors of the logged-in account (observed
+    // answering from a "codex_apps" MCP server with foreign credentials).
+    '-c',
+    'features.apps=false',
+  );
+  return args;
+}
+
+/**
+ * Parses `codex exec --json` JSONL events: the thread id from
+ * `thread.started`, the last `agent_message` as the turn's answer,
+ * `error` / `turn.failed` events as failures, and `command_execution` /
+ * `web_search` items as escapes from the MCP binding.
+ */
+export function parseCodexJsonl(stdout: string): AgentTurnResult & { sessionId?: string } {
+  let sessionId: string | undefined;
+  let lastMessage: string | undefined;
+  let errorMessage: string | undefined;
+  const escapes: string[] = [];
+
+  for (const line of stdout.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('{')) continue;
+    let event: { type?: string; thread_id?: string; message?: string; error?: { message?: string }; item?: unknown };
+    try {
+      event = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+
+    if (event.type === 'thread.started' && typeof event.thread_id === 'string') {
+      sessionId = event.thread_id;
+    } else if (event.type === 'item.completed') {
+      const item = event.item as
+        { type?: string; text?: string; command?: string; query?: string; server?: string; tool?: string } | undefined;
+      if (item?.type === 'agent_message' && typeof item.text === 'string') {
+        lastMessage = item.text;
+      } else if (item?.type === 'command_execution') {
+        escapes.push(`shell: ${truncate(item.command ?? '(unknown command)')}`);
+      } else if (item?.type === 'web_search') {
+        escapes.push(`web search: ${truncate(item.query ?? '(unknown query)')}`);
+      } else if (item?.type === 'mcp_tool_call' && item.server !== MCP_SERVER_ALIAS) {
+        // e.g. ChatGPT apps/connectors surface as server "codex_apps"
+        escapes.push(`foreign MCP server: ${item.server ?? '(unknown)'} → ${truncate(item.tool ?? '(unknown tool)')}`);
+      }
+    } else if (event.type === 'error' && typeof event.message === 'string') {
+      errorMessage = event.message;
+    } else if (event.type === 'turn.failed') {
+      errorMessage = event.error?.message ?? 'codex turn failed';
+    }
+  }
+
+  if (lastMessage !== undefined) {
+    return { text: lastMessage, isError: false, sessionId, escapes };
+  }
+  return { text: errorMessage ?? stdout.trim(), isError: errorMessage !== undefined, sessionId, escapes };
+}
+
+function truncate(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}

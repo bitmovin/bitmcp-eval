@@ -1,0 +1,9 @@
+name: compare two forecasts
+prompt: 'Compare the 3-day temperature forecast of Berlin and London and tell me which city will be warmer on average.'
+expectedTools:
+  - get_forecast
+  - get_forecast
+# Rubric for the optional LLM judge (see README, "The LLM judge"):
+expectedOutcome: >
+  Names one of the two cities as warmer on average, with the conclusion backed by
+  forecast values actually returned by the tools (demo data: Berlin is warmer).

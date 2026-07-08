@@ -1,33 +1,50 @@
 {
-  "name": "bitmcp_eval",
+  "name": "bitmcp-eval",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "build": "npm run build --workspace @bitmcp_eval/common && npm run build --workspace @bitmcp_eval/ink-cli",
-    "clean": "npm run clean --workspace @bitmcp_eval/common && npm run clean --workspace @bitmcp_eval/ink-cli",
-    
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start-tui": "npm run start-dev --workspace @bitmcp_eval/ink-cli"
-  },
-  "keywords": [],
-  "author": "",
+  "description": "Evaluation harness for MCP servers: run LLM agents against your server through a recording proxy and validate which tools they call",
+  "private": true,
   "type": "module",
-  "license": "ISC",
-  "workspaces": [
-    "src/tui/ink-cli",
-    "src/common"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitmovin-engineering/bitmcp_eval.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "evaluation",
+    "llm",
+    "agent",
+    "testing"
   ],
-  "dependencies": {
-    "@octokit/rest": "^22.0.1",
-    "express": "^5.2.1",
-    "ink": "^7.1.0",
-    "octokit": "^5.0.5",
-    "react": "^19.2.7"
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/demo-mcp-server"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach -At run build",
+    "clean": "yarn workspaces foreach -At run clean",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "start": "yarn workspace @bitmcp-eval/cli start",
+    "dev": "yarn workspace @bitmcp-eval/cli dev",
+    "demo-server": "yarn workspace @bitmcp-eval/demo-mcp-server start"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
-    "@types/react": "^19.2.17",
-    "typescript": "^6.0.3"
-  }
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.11",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^6.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "yarn@4.17.0+sha512.c2957de2f9025ab14d63b24d0d8be1f1655810e22c341042c27f7ecd017b180ec12db73d69ac366d71b304ef9f069349ce462de96f04f8f1da317f4f762c95ae"
 }

@@ -1,0 +1,33 @@
+{
+  "name": "@bitmcp-eval/cli",
+  "version": "1.0.0",
+  "description": "Terminal UI for running bitmcp-eval evaluation runs against an MCP server",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "bitmcp-eval": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsx src/cli.tsx",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@bitmcp-eval/core": "workspace:*",
+    "ink": "^7.1.0",
+    "meow": "^13.2.0",
+    "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.9",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3"
+  }
+}

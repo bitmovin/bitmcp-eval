@@ -1,0 +1,4 @@
+name: list supported cities
+prompt: 'Which cities does the weather service have data for?'
+expectedTools:
+  - list_supported_cities
