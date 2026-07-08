@@ -20,6 +20,12 @@ const testCaseFileSchema = z.object({
    * expectations are met or the list is exhausted.
    */
   answers: z.array(z.string().min(1)).default([]),
+  /**
+   * Optional rubric for the LLM judge: what a correct answer looks like
+   * (value ranges, orderings, units, "should clearly state zero" etc.).
+   * Ignored when no judge is configured.
+   */
+  expectedOutcome: z.string().min(1).optional(),
 });
 
 export interface TestCase {
@@ -27,6 +33,8 @@ export interface TestCase {
   prompt: string;
   expectedTools: string[];
   answers: string[];
+  /** Optional rubric for the LLM judge. */
+  expectedOutcome?: string;
   /** Absolute path of the file this test case was loaded from. */
   file: string;
 }
@@ -70,6 +78,7 @@ export async function loadTestCases(dir: string): Promise<TestCase[]> {
       prompt: parsed.data.prompt,
       expectedTools: parsed.data.expectedTools,
       answers: parsed.data.answers,
+      expectedOutcome: parsed.data.expectedOutcome,
       file,
     });
   }

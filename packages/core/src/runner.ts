@@ -1,5 +1,6 @@
 import type { Agent, AgentSession } from './agent.js';
 import type { EvalConfig } from './config.js';
+import { judgeIteration, type JudgeResult } from './judge.js';
 import { McpRecordingProxy, type ProxyRequestInfo, type ToolCallRecord } from './proxy.js';
 import type { TestCase } from './testcase.js';
 import { validateToolCalls, type ValidationResult } from './validate.js';
@@ -29,6 +30,11 @@ export interface IterationResult {
   escapes: string[];
   /** The full conversation: initial prompt plus any scripted answers that were needed. */
   turns: ConversationTurn[];
+  /**
+   * Independent LLM verdict on this iteration, when a judge is configured.
+   * Advisory only — it never changes `passed`.
+   */
+  judge?: JudgeResult;
   /** The agent's final answer, when it produced one. */
   agentResponse?: string;
   /** Set when the agent invocation itself failed (crash, timeout, agent-side error). */
@@ -209,11 +215,19 @@ export class EvalRunner {
   ): Promise<IterationResult> {
     const { config } = this.opts;
     const session = agent.createSession(proxyUrl, { timeoutMs: config.run.timeoutSeconds * 1000 });
+    let result: IterationResult;
     try {
-      return await this.runConversation(testCase, iteration, proxy, session);
+      result = await this.runConversation(testCase, iteration, proxy, session);
     } finally {
       await session.close?.();
     }
+
+    if (config.judge) {
+      // Advisory second opinion; judgeIteration never throws (errors become
+      // verdict "error"), so a broken judge annotates instead of breaking runs.
+      result.judge = await judgeIteration(config.judge, testCase, result);
+    }
+    return result;
   }
 
   private async runConversation(

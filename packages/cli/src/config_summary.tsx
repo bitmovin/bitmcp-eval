@@ -21,6 +21,12 @@ export default function ConfigSummary({ config }: { config: EvalConfig }) {
         <Text bold>Run: </Text>
         agent(s) <Text color="cyan">{config.run.agents.join(', ')}</Text> · {config.run.iterations} iteration(s) per
         test case · timeout {config.run.timeoutSeconds}s
+        {config.judge && (
+          <Text>
+            {' '}
+            · judge <Text color="magenta">{config.judge.model}</Text>
+          </Text>
+        )}
       </Text>
     </Box>
   );

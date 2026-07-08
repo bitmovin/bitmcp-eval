@@ -35,6 +35,7 @@ locally or remote, with authentication (headers or OAuth) handled transparently.
 - [Configuration reference](#configuration-reference)
 - [Choosing the agents](#choosing-the-agents) — claude vs codex
 - [OAuth-protected MCP servers](#oauth-protected-mcp-servers) — the `login` command, token cache
+- [The LLM judge](#the-llm-judge-optional) — an independent semantic verdict per iteration
 - [Security & safety](#security--safety)
 - [Architecture](#architecture)
 - [Development](#development) · [Roadmap](#roadmap)
@@ -200,6 +201,7 @@ banner and auto-refreshes every 10 seconds until the run completes.
 | `run.agents`         | list of `claude` \| `codex` | `[claude]`                        | Agents to evaluate — the whole suite runs once per agent, with per-agent pass rates in the report. `run.agent: <name>` works as a single-agent alias.                                                                          |
 | `run.timeoutSeconds` | int                         | `300`                             | Hard limit per agent invocation.                                                                                                                                                                                               |
 | `report.outDir`      | string                      | `./reports`                       | Output directory for the HTML report. Relative to the config file.                                                                                                                                                             |
+| `judge`              | object                      | —                                 | Optional LLM judge: `baseUrl` (OpenAI-compatible), `model`, optional `apiKey` (`${VAR}`-interpolated), `timeoutSeconds` (default 60). See "The LLM judge".                                                                     |
 
 ## Choosing the agents
 
@@ -320,6 +322,45 @@ rm -rf ~/.bitmcp-eval/tokens && yarn start login -c eval.yaml
 
 > Already have a token by other means? OAuth is ultimately just a header — you can bypass
 > all of the above and set `Authorization: Bearer ${TOKEN}` under `mcp.headers` instead.
+
+## The LLM judge (optional)
+
+Tool-call validation is deterministic but literal: it can fail an iteration whose _answer_
+was actually right (the agent batched two metrics into one call), or pass one whose answer
+was wrong (all tools called, conclusion bogus). The optional judge adds a second,
+**semantic** opinion: after each iteration an LLM reviews the user request, the recorded
+tool calls (with arguments and results), and the full conversation, and returns
+`pass` / `fail` / `uncertain` plus 2–4 sentences of reasoning.
+
+**The judge never overrides the mechanical result.** Both are shown side by side; the
+interesting rows are where they disagree, so the report gets a "Judge disagrees" tile, a
+⚖ marker on each disagreeing iteration, and the TUI summary counts them.
+
+Enable it with a `judge` block in `eval.yaml` — any OpenAI-compatible endpoint works, so a
+local ollama model is enough:
+
+```yaml
+judge:
+  baseUrl: http://127.0.0.1:11434/v1 # ollama — or api.openai.com/v1, any compatible API
+  model: qwen2.5:7b
+  # apiKey: ${JUDGE_API_KEY}          # not needed for ollama
+```
+
+Give the judge a per-testcase rubric with the optional `expectedOutcome` field — this is
+where product-spec knowledge that tool counting can't express becomes checkable:
+
+```yaml
+prompt: 'Show me the full ad completion funnel for last week.'
+expectedTools:
+  - queryTotal
+expectedOutcome: >
+  Four funnel values in descending order (quartile_1 >= midpoint >= quartile_3 >=
+  completions), based on real tool data. A violated order means broken data.
+```
+
+Judge failures (endpoint down, unparseable output) are recorded as an `error` verdict on
+the affected iteration and never break the run. Each verdict is one LLM call per
+iteration — with a local ollama model that's free and adds a few seconds per iteration.
 
 ## Security & safety
 

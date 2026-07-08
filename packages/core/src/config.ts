@@ -70,6 +70,20 @@ const configSchema = z.object({
       outDir: z.string().min(1).default('./reports'),
     })
     .default({ outDir: './reports' }),
+  /**
+   * Optional LLM judge: an independent semantic verdict per iteration,
+   * rendered next to the mechanical result (never overriding it).
+   */
+  judge: z
+    .object({
+      provider: z.literal('openai-compatible').default('openai-compatible'),
+      /** OpenAI-compatible chat-completions base URL, e.g. http://127.0.0.1:11434/v1 for ollama. */
+      baseUrl: z.string().min(1),
+      model: z.string().min(1),
+      apiKey: z.string().min(1).optional(),
+      timeoutSeconds: z.number().int().min(1).default(60),
+    })
+    .optional(),
 });
 
 export type EvalConfig = z.infer<typeof configSchema>;
@@ -127,6 +141,9 @@ export function loadConfig(path: string): EvalConfig {
     const { clientId, clientSecret } = config.mcp.oauth;
     if (clientId) config.mcp.oauth.clientId = interpolateEnv(clientId);
     if (clientSecret) config.mcp.oauth.clientSecret = interpolateEnv(clientSecret);
+  }
+  if (config.judge?.apiKey) {
+    config.judge.apiKey = interpolateEnv(config.judge.apiKey);
   }
   return config;
 }

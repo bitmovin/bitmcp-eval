@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { judgeDisagrees } from './judge.js';
 import type { EvalRunReport, IterationResult, TestCaseResult } from './runner.js';
 
 /**
@@ -61,6 +62,10 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
   .tool.error { background: #fee2e2; }
   .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: .6rem 1rem; margin: 1rem 0; font-size: .9rem; }
   .banner.aborted { background: #fee2e2; border-color: #b91c1c; }
+  .badge.uncertain { background: #e5e7eb; }
+  .badge.judge-error { background: #fef3c7; }
+  .judge { border-left: 3px solid #6366f1; padding: .3rem .6rem; margin: .3rem 0; background: #eef2ff33; font-size: .875rem; }
+  .judge .who { color: #6366f1; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -89,6 +94,7 @@ ${running ? '<meta http-equiv="refresh" content="10">' : ''}
     <div class="stat"><div class="value pass">${totals.passedIterations}</div><div class="label">Passed</div></div>
     <div class="stat"><div class="value fail">${totals.failedIterations}</div><div class="label">Failed</div></div>
     <div class="stat"><div class="value">${Math.round(passRate * 100)}%</div><div class="label">Pass rate</div></div>
+    ${renderJudgeStat(report)}
   </div>
 
   ${report.agents.length > 1 ? renderAgentComparison(report) : ''}
@@ -127,6 +133,14 @@ function detailsStateScript(startedAt: string): string {
   }, true);
 })();
 </script>`;
+}
+
+/** "Judge disagrees" tile, shown only when a judge produced verdicts. */
+function renderJudgeStat(report: EvalRunReport): string {
+  const judged = report.results.flatMap((r) => r.iterations).filter((it) => it.judge);
+  if (judged.length === 0) return '';
+  const disagreements = judged.filter((it) => judgeDisagrees(it.passed, it.judge)).length;
+  return `<div class="stat"><div class="value${disagreements > 0 ? ' fail' : ''}">${disagreements}</div><div class="label">Judge disagrees</div></div>`;
 }
 
 /** Pass-rate comparison across agents, shown for multi-agent runs. */
@@ -196,6 +210,23 @@ function renderIteration(it: IterationResult, key: string): string {
 
   const details: string[] = [];
   if (missing) details.push(`<div class="tools">missing:&nbsp;${missing}</div>`);
+  if (it.judge) {
+    const j = it.judge;
+    const badgeClass =
+      j.verdict === 'pass'
+        ? 'pass'
+        : j.verdict === 'fail'
+          ? 'fail'
+          : j.verdict === 'uncertain'
+            ? 'uncertain'
+            : 'judge-error';
+    const disagrees = judgeDisagrees(it.passed, j);
+    details.push(
+      `<div class="judge"><span class="who">LLM judge${j.model ? ` (${esc(j.model)})` : ''}:</span> ` +
+        `<span class="badge ${badgeClass}">${esc(j.verdict)}</span>` +
+        `${disagrees ? ' <b>&#9878; disagrees with the tool-based result</b>' : ''}<br>${esc(j.reasoning)}</div>`,
+    );
+  }
   if (it.escapes.length) {
     details.push(
       `<details data-key="${key}-esc"><summary>&#9888; Left the MCP binding (${it.escapes.length}×)</summary>${it.escapes

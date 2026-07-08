@@ -21,3 +21,11 @@ run:
 
 report:
   outDir: ../reports # where the static HTML report is written
+
+
+# Optional: an LLM judge adds an independent semantic verdict per iteration
+# (never overrides the tool-based result). Any OpenAI-compatible endpoint works:
+# judge:
+#   baseUrl: http://127.0.0.1:11434/v1 # e.g. local ollama
+#   model: qwen2.5:7b
+#   # apiKey: ${JUDGE_API_KEY}

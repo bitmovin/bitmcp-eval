@@ -5,6 +5,7 @@ import { Box, Static, Text, useApp } from 'ink';
 import {
   createAgent,
   createAuthSession,
+  judgeDisagrees,
   loadConfig,
   loadTestCases,
   writeHtmlReport,
@@ -276,6 +277,7 @@ export default function App({ configPath, iterationsOverride, debug }: AppProps)
 
 function CompletedTestCaseRow({ result, showAgent }: { result: TestCaseResult; showAgent: boolean }) {
   const allPassed = result.iterations.every((it) => it.passed);
+  const disagreements = result.iterations.filter((it) => judgeDisagrees(it.passed, it.judge)).length;
   return (
     <Text>
       <Text color={allPassed ? 'green' : 'red'}>{allPassed ? '✓' : '✗'}</Text>{' '}
@@ -285,6 +287,7 @@ function CompletedTestCaseRow({ result, showAgent }: { result: TestCaseResult; s
         {' '}
         ({result.iterations.filter((it) => it.passed).length}/{result.iterations.length} passed)
       </Text>
+      {disagreements > 0 && <Text color="magenta"> ⚖ judge disagrees ×{disagreements}</Text>}
     </Text>
   );
 }
@@ -313,11 +316,26 @@ function RunSummary({ report, htmlPath }: { report: EvalRunReport; htmlPath: str
               )
             </Text>
           ))}
+        <JudgeSummary report={report} />
         <Text>
           Report: <Text color="blue">file://{htmlPath}</Text>
         </Text>
       </Box>
     </Box>
+  );
+}
+
+function JudgeSummary({ report }: { report: EvalRunReport }) {
+  const judged = report.results.flatMap((r) => r.iterations).filter((it) => it.judge);
+  if (judged.length === 0) return null;
+  const disagreements = judged.filter((it) => judgeDisagrees(it.passed, it.judge)).length;
+  const errors = judged.filter((it) => it.judge?.verdict === 'error').length;
+  return (
+    <Text>
+      LLM judge: {judged.length} verdicts ·{' '}
+      <Text color={disagreements > 0 ? 'magenta' : undefined}>{disagreements} disagree with the tool-based result</Text>
+      {errors > 0 && <Text color="yellow"> · {errors} judge errors</Text>}
+    </Text>
   );
 }
 

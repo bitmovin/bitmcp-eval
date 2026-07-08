@@ -32,6 +32,14 @@ export {
 } from './runner.js';
 export { loadTestCases, type TestCase } from './testcase.js';
 export {
+  buildJudgePrompt,
+  judgeDisagrees,
+  judgeIteration,
+  parseVerdict,
+  type JudgeConfig,
+  type JudgeResult,
+} from './judge.js';
+export {
   createAuthSession,
   discoverOAuth,
   interactiveLogin,
