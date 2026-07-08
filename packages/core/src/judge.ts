@@ -77,6 +77,15 @@ export function buildJudgePrompt(testCase: TestCase, iteration: IterationResult)
     lines.push('', `## Harness error`, clip(iteration.error, 400));
   }
 
+  // Small models drift into answering the user's question themselves after a
+  // prompt full of data. Restating the required output LAST leans on recency.
+  lines.push(
+    '',
+    '## Your task',
+    "Do NOT answer the user request yourself. Judge the agent's answer above.",
+    'Respond with ONLY this JSON object: {"verdict": "pass" | "fail" | "uncertain", "reasoning": "<2-4 concise sentences>"}',
+  );
+
   return lines.join('\n');
 }
 
@@ -97,7 +106,9 @@ export async function judgeIteration(
   iteration: IterationResult,
   fetchImpl: typeof fetch = fetch,
 ): Promise<JudgeResult> {
-  try {
+  type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+
+  const requestVerdict = async (messages: ChatMessage[]): Promise<{ content?: string; error?: JudgeResult }> => {
     const res = await fetchImpl(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -108,20 +119,50 @@ export async function judgeIteration(
         model: config.model,
         temperature: 0,
         response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildJudgePrompt(testCase, iteration) },
-        ],
+        messages,
       }),
       signal: AbortSignal.timeout(config.timeoutSeconds * 1000),
     });
     if (!res.ok) {
-      return { verdict: 'error', reasoning: `Judge endpoint returned ${res.status}: ${clip(await res.text(), 200)}` };
+      return {
+        error: { verdict: 'error', reasoning: `Judge endpoint returned ${res.status}: ${clip(await res.text(), 200)}` },
+      };
     }
     const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const content = json.choices?.[0]?.message?.content;
-    if (!content) return { verdict: 'error', reasoning: 'Judge returned no content' };
-    return { ...parseVerdict(content), model: config.model };
+    return { content: json.choices?.[0]?.message?.content };
+  };
+
+  try {
+    const messages: ChatMessage[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildJudgePrompt(testCase, iteration) },
+    ];
+
+    const first = await requestVerdict(messages);
+    if (first.error) return first.error;
+    if (!first.content) return { verdict: 'error', reasoning: 'Judge returned no content' };
+
+    let parsed = parseVerdict(first.content);
+    if (parsed.verdict === 'error') {
+      // One repair turn: small models sometimes answer the user's question
+      // instead of judging it. Confronting them with their own output plus a
+      // terse format demand almost always yields the verdict on the second try
+      // (a plain retry would not — temperature is 0).
+      const second = await requestVerdict([
+        ...messages,
+        { role: 'assistant', content: first.content },
+        {
+          role: 'user',
+          content:
+            'That was not the required format. Do not answer the user request. ' +
+            'Respond with ONLY this JSON object and nothing else: ' +
+            '{"verdict": "pass" | "fail" | "uncertain", "reasoning": "<2-4 concise sentences>"}',
+        },
+      ]);
+      if (second.error) return second.error;
+      if (second.content) parsed = parseVerdict(second.content);
+    }
+    return { ...parsed, model: config.model };
   } catch (err) {
     return { verdict: 'error', reasoning: `Judge unavailable: ${err instanceof Error ? err.message : String(err)}` };
   }

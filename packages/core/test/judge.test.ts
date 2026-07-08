@@ -137,6 +137,46 @@ describe('judgeIteration', () => {
     expect(seen).toEqual(['Bearer sk-123']);
   });
 
+  it('recovers with a repair turn when the model answers the question instead of judging', async () => {
+    // Observed live with qwen2.5:7b: it returned the analytics answer itself
+    // ({"ad_error_percentage": …}) instead of the verdict object.
+    const replies = [
+      '{"ad_error_percentage": "0.0809%", "most_frequent_error_codes": [{"error_code": 400, "sessions": 1967}]}',
+      '{"verdict":"fail","reasoning":"No ranked list was produced."}',
+    ];
+    const bodies: Array<{ messages: Array<{ role: string; content: string }> }> = [];
+    const impl = (async (_url: string | URL, init?: RequestInit) => {
+      bodies.push(JSON.parse(init!.body!.toString()));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: replies.shift() } }] }),
+      } as Response;
+    }) as unknown as typeof fetch;
+
+    const result = await judgeIteration(CONFIG, TEST_CASE, ITERATION, impl);
+
+    expect(result.verdict).toBe('fail');
+    expect(result.reasoning).toBe('No ranked list was produced.');
+    expect(bodies).toHaveLength(2);
+    // The repair turn confronts the model with its own bad output.
+    const repair = bodies[1].messages;
+    expect(repair.map((m) => m.role)).toEqual(['system', 'user', 'assistant', 'user']);
+    expect(repair[2].content).toContain('ad_error_percentage');
+    expect(repair[3].content).toContain('not the required format');
+  });
+
+  it('returns an error verdict when the repair turn also fails', async () => {
+    const impl = (async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: 'still not json' } }] }),
+    })) as unknown as typeof fetch;
+    const result = await judgeIteration(CONFIG, TEST_CASE, ITERATION, impl);
+    expect(result.verdict).toBe('error');
+    expect(result.reasoning).toContain('unparseable');
+  });
+
   it('never throws: endpoint errors become an error verdict', async () => {
     const { impl } = fakeJudgeEndpoint(503);
     const result = await judgeIteration(CONFIG, TEST_CASE, ITERATION, impl);
