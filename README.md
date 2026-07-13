@@ -1,6 +1,6 @@
 # bitmcp-eval
 
-[![CI](https://github.com/bitmovin-engineering/bitmcp_eval/actions/workflows/ci.yml/badge.svg)](https://github.com/bitmovin-engineering/bitmcp_eval/actions/workflows/ci.yml)
+[![CI](https://github.com/bitmovin/bitmcp-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/bitmovin/bitmcp-eval/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
 
