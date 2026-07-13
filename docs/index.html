@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bitmcp-eval — Evaluate how LLM agents actually use your MCP server</title>
+    <meta
+      name="description"
+      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), intercepts all MCP traffic with a recording proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report."
+    />
+    <meta property="og:title" content="bitmcp-eval" />
+    <meta
+      property="og:description"
+      content="Evaluate how LLM agents actually use your MCP server."
+    />
+    <meta property="og:type" content="website" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8D%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --bg: #0b1020;
+        --bg-2: #11172c;
+        --panel: #ffffff;
+        --ink: #1a2233;
+        --ink-soft: #55617a;
+        --line: #e6e9f2;
+        --brand: #6c5ce7;
+        --brand-2: #00cec9;
+        --accent: #16c784;
+        --code-bg: #0e1426;
+        --code-ink: #d6e0ff;
+        --radius: 14px;
+        --maxw: 1080px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--panel);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--brand);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      code,
+      pre,
+      .mono {
+        font-family: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas,
+          monospace;
+      }
+      .wrap {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ---------- Hero ---------- */
+      .hero {
+        background:
+          radial-gradient(
+            1200px 500px at 80% -10%,
+            rgba(108, 92, 231, 0.35),
+            transparent 60%
+          ),
+          radial-gradient(
+            900px 500px at 0% 0%,
+            rgba(0, 206, 201, 0.25),
+            transparent 55%
+          ),
+          linear-gradient(180deg, var(--bg), var(--bg-2));
+        color: #eaf0ff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 0;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        font-size: 18px;
+        color: #fff;
+      }
+      .brand .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--brand-2), var(--brand));
+        box-shadow: 0 0 18px rgba(0, 206, 201, 0.7);
+      }
+      .nav a {
+        color: #c7d2f0;
+        font-size: 15px;
+        margin-left: 22px;
+      }
+      .nav a:hover {
+        color: #fff;
+        text-decoration: none;
+      }
+      .hero-inner {
+        padding: 64px 0 84px;
+        text-align: center;
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--brand-2);
+        background: rgba(0, 206, 201, 0.1);
+        border: 1px solid rgba(0, 206, 201, 0.25);
+        padding: 6px 12px;
+        border-radius: 999px;
+        margin-bottom: 22px;
+      }
+      h1 {
+        font-size: clamp(38px, 6vw, 68px);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        margin: 0 0 18px;
+        color: #fff;
+      }
+      .lede {
+        font-size: clamp(18px, 2.4vw, 22px);
+        color: #c3cdec;
+        max-width: 720px;
+        margin: 0 auto 32px;
+      }
+      .cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 13px 22px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 16px;
+        border: 1px solid transparent;
+        transition:
+          transform 0.08s ease,
+          box-shadow 0.2s ease;
+      }
+      .btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--brand), #8a7bff);
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(108, 92, 231, 0.45);
+      }
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.06);
+        color: #eaf0ff;
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+      .badges {
+        margin-top: 30px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .badge {
+        font-size: 12.5px;
+        color: #b9c4e6;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        padding: 5px 12px;
+      }
+      .badge b {
+        color: var(--accent);
+      }
+
+      /* ---------- Sections ---------- */
+      section {
+        padding: 78px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-head {
+        text-align: center;
+        max-width: 720px;
+        margin: 0 auto 46px;
+      }
+      h2 {
+        font-size: clamp(26px, 3.4vw, 38px);
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+      }
+      .section-head p {
+        color: var(--ink-soft);
+        font-size: 18px;
+        margin: 0;
+      }
+
+      /* pipeline */
+      .pipe {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .stage {
+        flex: 1 1 190px;
+        min-width: 170px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px 20px;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(20, 30, 60, 0.05);
+      }
+      .stage .ic {
+        font-size: 26px;
+      }
+      .stage h3 {
+        margin: 10px 0 6px;
+        font-size: 16px;
+      }
+      .stage p {
+        margin: 0;
+        font-size: 13.5px;
+        color: var(--ink-soft);
+      }
+      .arrow {
+        align-self: center;
+        color: var(--brand);
+        font-size: 26px;
+        padding: 0 6px;
+        font-weight: 700;
+      }
+      .pipe-note {
+        text-align: center;
+        color: var(--ink-soft);
+        margin-top: 26px;
+        font-size: 15px;
+      }
+
+      /* features */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 26px;
+        box-shadow: 0 8px 24px rgba(20, 30, 60, 0.04);
+      }
+      .card .ic {
+        font-size: 24px;
+      }
+      .card h3 {
+        margin: 12px 0 8px;
+        font-size: 18px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 15px;
+      }
+      .card code {
+        background: #f1f3fa;
+        padding: 1px 6px;
+        border-radius: 5px;
+        font-size: 13px;
+      }
+
+      /* code block */
+      .quickstart {
+        background: linear-gradient(180deg, #fbfbfe, #f6f7fc);
+      }
+      pre {
+        background: var(--code-bg);
+        color: var(--code-ink);
+        border-radius: var(--radius);
+        padding: 22px 24px;
+        overflow-x: auto;
+        font-size: 14px;
+        line-height: 1.7;
+        margin: 0;
+        border: 1px solid #1b2340;
+      }
+      pre .c {
+        color: #7f8bb0;
+      }
+      pre .p {
+        color: var(--brand-2);
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .cols .side h3 {
+        margin-top: 0;
+      }
+      .cols .side p {
+        color: var(--ink-soft);
+      }
+      @media (max-width: 760px) {
+        .cols {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* footer */
+      footer {
+        background: var(--bg);
+        color: #aab5d6;
+        padding: 44px 0;
+        border-bottom: none;
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .foot a {
+        color: #cdd6f2;
+        margin-left: 20px;
+      }
+      .foot .brand {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ================= HERO ================= -->
+    <header class="hero">
+      <div class="wrap">
+        <nav class="nav">
+          <div class="brand"><span class="dot"></span> bitmcp-eval</div>
+          <div>
+            <a href="#how">How it works</a>
+            <a href="#quickstart">Quickstart</a>
+            <a href="#features">Features</a>
+            <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
+          </div>
+        </nav>
+
+        <div class="hero-inner">
+          <span class="eyebrow">Open source · MIT</span>
+          <h1>Evaluate how LLM agents<br />actually use your MCP server</h1>
+          <p class="lede">
+            You wrote an MCP server — but do agents <em>use</em> it the way you intended?
+            Do they pick the right tool for a given question? Every time, or only 7 runs
+            out of 10? <strong>bitmcp-eval</strong> measures it.
+          </p>
+          <div class="cta">
+            <a class="btn btn-primary" href="#quickstart">Get started →</a>
+            <a class="btn btn-ghost" href="https://github.com/bitmovin/bitmcp-eval"
+              >★ View on GitHub</a
+            >
+          </div>
+          <div class="badges">
+            <span class="badge">CI <b>passing</b></span>
+            <span class="badge">License <b>MIT</b></span>
+            <span class="badge">Node <b>≥ 20</b></span>
+            <span class="badge">Agents <b>claude · codex</b></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= PROBLEM / HOW ================= -->
+    <section id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>A recording proxy, not a rewrite</h2>
+          <p>
+            bitmcp-eval runs your prompts through a real chat agent, intercepts every call
+            to your MCP server, and checks the observed tool calls against your
+            expectations — multiple times per prompt, because agent behavior has spread.
+          </p>
+        </div>
+
+        <div class="pipe">
+          <div class="stage">
+            <div class="ic">📝</div>
+            <h3>Your prompts</h3>
+            <p>YAML test cases with the tools you expect the agent to call.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="stage">
+            <div class="ic">🤖</div>
+            <h3>Real chat agent</h3>
+            <p><code>claude</code> or <code>codex</code>, run headlessly per iteration.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="stage">
+            <div class="ic">🛰️</div>
+            <h3>Recording proxy</h3>
+            <p>Forwards MCP traffic byte-for-byte and records every tool call.</p>
+          </div>
+          <div class="arrow">→</div>
+          <div class="stage">
+            <div class="ic">🗄️</div>
+            <h3>Your MCP server</h3>
+            <p>Unchanged. Anything speaking MCP StreamableHTTP works.</p>
+          </div>
+        </div>
+        <p class="pipe-note">
+          The proxy operates on the transport layer — <strong>zero changes to your
+          server</strong> — then validates expected vs. recorded tool calls into a live TUI
+          and a static HTML report.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================= QUICKSTART ================= -->
+    <section id="quickstart" class="quickstart">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Quickstart</h2>
+          <p>Two minutes against the bundled demo weather server, to verify your toolchain end to end.</p>
+        </div>
+        <div class="cols">
+          <div>
+            <pre><span class="c"># install &amp; build the monorepo</span>
+corepack enable
+yarn install
+yarn build
+
+<span class="c"># terminal 1 — demo MCP server on :3210</span>
+yarn demo-server
+
+<span class="c"># terminal 2 — run the evaluation</span>
+yarn start <span class="p">-c</span> examples/eval.yaml</pre>
+          </div>
+          <div class="side">
+            <h3>You get a verdict, with the spread</h3>
+            <pre><span class="p">✓</span> compare two forecasts  ✓✓ (2/2 passed)
+<span class="p">✓</span> current weather lookup ✓✓ (2/2 passed)
+<span class="p">✓</span> list supported cities  ✓✓ (2/2 passed)
+
+3 test cases · 6 iterations
+6 passed · 0 failed · <span class="p">100% pass</span>
+Report: bitmcp-eval-…​.html</pre>
+            <p style="margin-top: 16px">
+              Requires Node ≥ 20 and a recent <code>claude</code> or <code>codex</code> CLI,
+              installed and authenticated. Full setup in the
+              <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FEATURES ================= -->
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>What's in the box</h2>
+          <p>Everything needed to turn "it seemed to work" into a measured pass rate.</p>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="ic">🛰️</div>
+            <h3>Transport-level proxy</h3>
+            <p>
+              Records every <code>tools/call</code> — name, arguments, result, error state,
+              duration — with no changes to the server under test.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">🤝</div>
+            <h3>claude &amp; codex</h3>
+            <p>
+              Run one agent or both. The suite executes once per agent with per-agent pass
+              rates — "does codex use my server as reliably as claude?"
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">🔁</div>
+            <h3>Iterations &amp; spread</h3>
+            <p>
+              Each test case runs N times, because agent behavior varies. You see 7/10, not
+              a single lucky green check.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">🔐</div>
+            <h3>OAuth, handled</h3>
+            <p>
+              401 is auto-detected; the proxy does authorization-code + PKCE, caches and
+              refreshes tokens. Dynamic client registration needs zero config.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">⚖️</div>
+            <h3>Optional LLM judge</h3>
+            <p>
+              A second, semantic opinion per iteration (any OpenAI-compatible endpoint). It
+              never overrides the mechanical result — disagreements get flagged.
+            </p>
+          </div>
+          <div class="card">
+            <div class="ic">📊</div>
+            <h3>Live TUI + HTML report</h3>
+            <p>
+              Watch runs live, then share a self-contained report with each iteration's tool
+              calls, arguments, missing expectations, and full conversation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CTA ================= -->
+    <section style="text-align: center">
+      <div class="wrap">
+        <h2>Put your MCP server under test</h2>
+        <p style="color: var(--ink-soft); font-size: 18px; max-width: 620px; margin: 0 auto 28px">
+          Clone the repo, point it at your server, and get a measured pass rate instead of a
+          hunch.
+        </p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/bitmovin/bitmcp-eval"
+            >★ Star on GitHub</a
+          >
+          <a class="btn btn-ghost" href="https://github.com/bitmovin/bitmcp-eval#readme"
+            >Read the docs</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+      <div class="wrap foot">
+        <div class="brand"><span class="dot"></span> bitmcp-eval</div>
+        <div>
+          <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
+          <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">MIT License</a>
+          <a href="https://bitmovin.com">Bitmovin</a>
+        </div>
+      </div>
+      <div class="wrap" style="margin-top: 18px; font-size: 13px; color: #7c88ad">
+        MIT © Bitmovin, Inc. · Built by the Observability team.
+      </div>
+    </footer>
+  </body>
+</html>
