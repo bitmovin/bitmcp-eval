@@ -3,572 +3,380 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>bitmcp-eval — Evaluate how LLM agents actually use your MCP server</title>
+    <title>bitmcp-eval — evaluate how LLM agents actually use your MCP server</title>
     <meta
       name="description"
-      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), intercepts all MCP traffic with a recording proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report."
+      content="A terminal eval harness for MCP servers: run your prompts through claude/codex, record every tool call through a proxy, validate against expectations, judge semantically, and get an HTML report."
     />
     <meta property="og:title" content="bitmcp-eval" />
-    <meta
-      property="og:description"
-      content="Evaluate how LLM agents actually use your MCP server."
-    />
-    <meta property="og:type" content="website" />
+    <meta property="og:description" content="Evaluate how LLM agents actually use your MCP server." />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8D%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%230d1017'/%3E%3Ctext x='14' y='62' font-family='monospace' font-size='40' fill='%2357d977'%3E%3E_%3C/text%3E%3C/svg%3E"
     />
     <style>
       :root {
-        --bg: #0b1020;
-        --bg-2: #11172c;
-        --panel: #ffffff;
-        --ink: #1a2233;
-        --ink-soft: #55617a;
-        --line: #e6e9f2;
-        --brand: #6c5ce7;
-        --brand-2: #00cec9;
-        --accent: #16c784;
-        --code-bg: #0e1426;
-        --code-ink: #d6e0ff;
-        --radius: 14px;
-        --maxw: 1080px;
+        --bg: #0b0d12;
+        --term: #0f131b;
+        --term-2: #121722;
+        --line: #222a38;
+        --line-soft: #1a212d;
+        --fg: #c3ccda;
+        --dim: #67728a;
+        --dimmer: #454f63;
+        --green: #57d977;
+        --red: #f2686c;
+        --cyan: #4fd6e0;
+        --yellow: #e2c179;
+        --mag: #c98bdb;
+        --sel: rgba(87, 217, 119, 0.22);
       }
-      * {
-        box-sizing: border-box;
-      }
-      html {
-        scroll-behavior: smooth;
-      }
+      * { box-sizing: border-box; }
+      ::selection { background: var(--sel); }
+      html { scroll-behavior: smooth; }
       body {
         margin: 0;
-        color: var(--ink);
-        background: var(--panel);
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-          sans-serif;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-      }
-      a {
-        color: var(--brand);
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      code,
-      pre,
-      .mono {
-        font-family: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas,
-          monospace;
-      }
-      .wrap {
-        max-width: var(--maxw);
-        margin: 0 auto;
-        padding: 0 24px;
-      }
-
-      /* ---------- Hero ---------- */
-      .hero {
-        background:
-          radial-gradient(
-            1200px 500px at 80% -10%,
-            rgba(108, 92, 231, 0.35),
-            transparent 60%
-          ),
-          radial-gradient(
-            900px 500px at 0% 0%,
-            rgba(0, 206, 201, 0.25),
-            transparent 55%
-          ),
-          linear-gradient(180deg, var(--bg), var(--bg-2));
-        color: #eaf0ff;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      }
-      .nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px 0;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        font-size: 18px;
-        color: #fff;
-      }
-      .brand .dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--brand-2), var(--brand));
-        box-shadow: 0 0 18px rgba(0, 206, 201, 0.7);
-      }
-      .nav a {
-        color: #c7d2f0;
-        font-size: 15px;
-        margin-left: 22px;
-      }
-      .nav a:hover {
-        color: #fff;
-        text-decoration: none;
-      }
-      .hero-inner {
-        padding: 64px 0 84px;
-        text-align: center;
-      }
-      .eyebrow {
-        display: inline-block;
-        font-size: 13px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--brand-2);
-        background: rgba(0, 206, 201, 0.1);
-        border: 1px solid rgba(0, 206, 201, 0.25);
-        padding: 6px 12px;
-        border-radius: 999px;
-        margin-bottom: 22px;
-      }
-      h1 {
-        font-size: clamp(38px, 6vw, 68px);
-        line-height: 1.05;
-        letter-spacing: -0.03em;
-        margin: 0 0 18px;
-        color: #fff;
-      }
-      .lede {
-        font-size: clamp(18px, 2.4vw, 22px);
-        color: #c3cdec;
-        max-width: 720px;
-        margin: 0 auto 32px;
-      }
-      .cta {
-        display: flex;
-        gap: 14px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        padding: 13px 22px;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 16px;
-        border: 1px solid transparent;
-        transition:
-          transform 0.08s ease,
-          box-shadow 0.2s ease;
-      }
-      .btn:hover {
-        text-decoration: none;
-        transform: translateY(-1px);
-      }
-      .btn-primary {
-        background: linear-gradient(135deg, var(--brand), #8a7bff);
-        color: #fff;
-        box-shadow: 0 10px 30px rgba(108, 92, 231, 0.45);
-      }
-      .btn-ghost {
-        background: rgba(255, 255, 255, 0.06);
-        color: #eaf0ff;
-        border-color: rgba(255, 255, 255, 0.18);
-      }
-      .badges {
-        margin-top: 30px;
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-      .badge {
-        font-size: 12.5px;
-        color: #b9c4e6;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 999px;
-        padding: 5px 12px;
-      }
-      .badge b {
-        color: var(--accent);
-      }
-
-      /* ---------- Sections ---------- */
-      section {
-        padding: 78px 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .section-head {
-        text-align: center;
-        max-width: 720px;
-        margin: 0 auto 46px;
-      }
-      h2 {
-        font-size: clamp(26px, 3.4vw, 38px);
-        letter-spacing: -0.02em;
-        margin: 0 0 12px;
-      }
-      .section-head p {
-        color: var(--ink-soft);
-        font-size: 18px;
-        margin: 0;
-      }
-
-      /* pipeline */
-      .pipe {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .stage {
-        flex: 1 1 190px;
-        min-width: 170px;
-        background: #fff;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        padding: 22px 20px;
-        text-align: center;
-        box-shadow: 0 8px 24px rgba(20, 30, 60, 0.05);
-      }
-      .stage .ic {
-        font-size: 26px;
-      }
-      .stage h3 {
-        margin: 10px 0 6px;
-        font-size: 16px;
-      }
-      .stage p {
-        margin: 0;
-        font-size: 13.5px;
-        color: var(--ink-soft);
-      }
-      .arrow {
-        align-self: center;
-        color: var(--brand);
-        font-size: 26px;
-        padding: 0 6px;
-        font-weight: 700;
-      }
-      .pipe-note {
-        text-align: center;
-        color: var(--ink-soft);
-        margin-top: 26px;
-        font-size: 15px;
-      }
-
-      /* features */
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
-      }
-      .card {
-        background: #fff;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        padding: 26px;
-        box-shadow: 0 8px 24px rgba(20, 30, 60, 0.04);
-      }
-      .card .ic {
-        font-size: 24px;
-      }
-      .card h3 {
-        margin: 12px 0 8px;
-        font-size: 18px;
-      }
-      .card p {
-        margin: 0;
-        color: var(--ink-soft);
-        font-size: 15px;
-      }
-      .card code {
-        background: #f1f3fa;
-        padding: 1px 6px;
-        border-radius: 5px;
-        font-size: 13px;
-      }
-
-      /* code block */
-      .quickstart {
-        background: linear-gradient(180deg, #fbfbfe, #f6f7fc);
-      }
-      pre {
-        background: var(--code-bg);
-        color: var(--code-ink);
-        border-radius: var(--radius);
-        padding: 22px 24px;
-        overflow-x: auto;
-        font-size: 14px;
-        line-height: 1.7;
-        margin: 0;
-        border: 1px solid #1b2340;
-      }
-      pre .c {
-        color: #7f8bb0;
-      }
-      pre .p {
-        color: var(--brand-2);
-      }
-      .cols {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
-        align-items: start;
-      }
-      .cols .side h3 {
-        margin-top: 0;
-      }
-      .cols .side p {
-        color: var(--ink-soft);
-      }
-      @media (max-width: 760px) {
-        .cols {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      /* footer */
-      footer {
         background: var(--bg);
-        color: #aab5d6;
-        padding: 44px 0;
-        border-bottom: none;
+        color: var(--fg);
+        font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Cascadia Code", Menlo,
+          Consolas, "Liberation Mono", monospace;
+        font-size: 15px;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+        background-size: 100% 28px, 44px 100%;
       }
-      .foot {
+      a { color: var(--cyan); text-decoration: none; border-bottom: 1px dotted rgba(79, 214, 224, 0.4); }
+      a:hover { border-bottom-style: solid; }
+      .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px; }
+      .dim { color: var(--dim); }
+      .green { color: var(--green); }
+      .red { color: var(--red); }
+      .cyan { color: var(--cyan); }
+      .yellow { color: var(--yellow); }
+      .mag { color: var(--mag); }
+      b, strong { color: #e7edf6; font-weight: 600; }
+
+      /* ---- top status bar (tmux-like) ---- */
+      .statusbar {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #0a0c11;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .statusbar .wrap {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
+        justify-content: space-between;
+        height: 40px;
       }
-      .foot a {
-        color: #cdd6f2;
-        margin-left: 20px;
+      .statusbar .left { color: var(--green); }
+      .statusbar .left b { color: var(--green); }
+      .statusbar nav a { color: var(--dim); border: 0; margin-left: 20px; }
+      .statusbar nav a::before { content: "› "; color: var(--dimmer); }
+      .statusbar nav a:hover { color: var(--fg); }
+
+      /* ---- generic terminal window ---- */
+      .term {
+        background: var(--term);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
       }
-      .foot .brand {
-        font-size: 16px;
+      .titlebar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: var(--term-2);
+        border-bottom: 1px solid var(--line);
+        font-size: 12.5px;
+        color: var(--dim);
       }
+      .tl { width: 11px; height: 11px; border-radius: 50%; background: #2c333f; }
+      .tl.r { background: #6a3535; }
+      .tl.y { background: #6a5f35; }
+      .tl.g { background: #35603f; }
+      .titlebar .path { margin-left: 8px; }
+      .term .body { padding: 20px 22px; overflow-x: auto; }
+      .term pre { margin: 0; white-space: pre; font: inherit; }
+
+      .prompt::before { content: "➜ "; color: var(--green); }
+      .prompt .cwd { color: var(--cyan); margin-right: 8px; }
+      .cursor {
+        display: inline-block;
+        width: 9px;
+        height: 1.05em;
+        background: var(--green);
+        vertical-align: text-bottom;
+        margin-left: 2px;
+        animation: blink 1.1s steps(1) infinite;
+      }
+      @keyframes blink { 50% { opacity: 0; } }
+
+      /* ---- hero ---- */
+      .hero { padding: 58px 0 40px; }
+      .eyebrow { color: var(--dimmer); font-size: 13px; letter-spacing: 0.02em; }
+      h1 {
+        font-size: clamp(28px, 5.2vw, 50px);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 14px 0 16px;
+        color: #eef3fa;
+        font-weight: 600;
+      }
+      h1 .u { color: var(--green); }
+      .lede { color: var(--dim); max-width: 680px; margin: 0 0 30px; font-size: 16px; }
+      .hero .term { margin-bottom: 26px; }
+
+      .btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      .btn {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--fg);
+        background: var(--term-2);
+      }
+      .btn:hover { border-color: var(--green); color: #fff; }
+      .btn.primary { border-color: rgba(87, 217, 119, 0.5); color: var(--green); }
+      .btn.primary:hover { background: rgba(87, 217, 119, 0.08); }
+      .metaline { margin-top: 22px; color: var(--dimmer); font-size: 13px; }
+      .metaline span { color: var(--dim); }
+
+      /* ---- sections ---- */
+      section { padding: 30px 0; border-top: 1px solid var(--line-soft); }
+      .cmd { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+      .cmd::before { content: "$ "; color: var(--green); }
+      .cmd .flag { color: var(--yellow); }
+      h2 { font-size: 22px; color: #eef3fa; margin: 0 0 10px; font-weight: 600; letter-spacing: -0.01em; }
+      .say { color: var(--dim); max-width: 720px; margin: 0 0 22px; }
+
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+
+      /* ---- features ---- */
+      .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 30px; }
+      @media (max-width: 720px) { .feat { grid-template-columns: 1fr; } }
+      .f { border-left: 2px solid var(--line); padding: 2px 0 6px 16px; }
+      .f h3 { margin: 0; font-size: 15px; color: #e7edf6; font-weight: 600; }
+      .f h3::before { content: "▸ "; color: var(--green); }
+      .f p { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
+      .f code { color: var(--cyan); }
+
+      /* ---- footer ---- */
+      footer { border-top: 1px solid var(--line); padding: 26px 0 40px; margin-top: 20px; }
+      .footgrid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--dim); font-size: 13px; }
+      footer .prompt { margin-top: 20px; color: var(--dim); }
     </style>
   </head>
   <body>
-    <!-- ================= HERO ================= -->
+    <!-- ===== status bar ===== -->
+    <div class="statusbar">
+      <div class="wrap">
+        <div class="left"><b>●</b> bitmcp-eval</div>
+        <nav>
+          <a href="#how">how</a>
+          <a href="#quickstart">quickstart</a>
+          <a href="#features">features</a>
+          <a href="https://github.com/bitmovin/bitmcp-eval">github</a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- ===== hero ===== -->
     <header class="hero">
       <div class="wrap">
-        <nav class="nav">
-          <div class="brand"><span class="dot"></span> bitmcp-eval</div>
-          <div>
-            <a href="#how">How it works</a>
-            <a href="#quickstart">Quickstart</a>
-            <a href="#features">Features</a>
-            <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
-          </div>
-        </nav>
+        <div class="eyebrow">// open source · MIT · by the Bitmovin Observability team</div>
+        <h1>Evaluate how LLM agents<br />actually <span class="u">use</span> your MCP server</h1>
+        <p class="lede">
+          You wrote an MCP server — but do agents pick the right tool for a given question?
+          Every time, or only 7 runs out of 10? bitmcp-eval runs your prompts through a real
+          agent, records every call through a proxy, and gives you a measured pass rate.
+        </p>
 
-        <div class="hero-inner">
-          <span class="eyebrow">Open source · MIT</span>
-          <h1>Evaluate how LLM agents<br />actually use your MCP server</h1>
-          <p class="lede">
-            You wrote an MCP server — but do agents <em>use</em> it the way you intended?
-            Do they pick the right tool for a given question? Every time, or only 7 runs
-            out of 10? <strong>bitmcp-eval</strong> measures it.
-          </p>
-          <div class="cta">
-            <a class="btn btn-primary" href="#quickstart">Get started →</a>
-            <a class="btn btn-ghost" href="https://github.com/bitmovin/bitmcp-eval"
-              >★ View on GitHub</a
-            >
+        <div class="term">
+          <div class="titlebar">
+            <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+            <span class="path">bitmovin@eval: ~/bitmcp-eval — zsh — 82×24</span>
           </div>
-          <div class="badges">
-            <span class="badge">CI <b>passing</b></span>
-            <span class="badge">License <b>MIT</b></span>
-            <span class="badge">Node <b>≥ 20</b></span>
-            <span class="badge">Agents <b>claude · codex</b></span>
+          <div class="body">
+<pre><span class="dim"># point it at your server, hand it your prompts, run it N times</span>
+<span class="prompt"><span class="cwd">~/bitmcp-eval</span>yarn start <span class="yellow">-c</span> eval.yaml <span class="yellow">-i</span> 2</span>
+
+<span class="dim">running 3 test cases × 2 iterations · agent:</span> <span class="cyan">claude</span>
+
+<span class="green">✓</span> current weather lookup     <span class="green">✓✓</span>   2/2 passed
+<span class="green">✓</span> compare two forecasts      <span class="green">✓✓</span>   2/2 passed
+<span class="green">✓</span> list supported cities      <span class="green">✓✓</span>   2/2 passed
+
+╭────────────────────────────────────────────────────╮
+│ <b>Run finished</b>                                        │
+│ 3 test cases · 6 iterations · <span class="green">6 passed</span> · 0 failed     │
+│ pass rate <span class="green">100%</span>  ▕████████████████████████▏        │
+│ report → <span class="cyan">bitmcp-eval-2026-07-13T14-45.html</span>          │
+╰────────────────────────────────────────────────────╯
+
+<span class="prompt"><span class="cwd">~/bitmcp-eval</span></span><span class="cursor"></span></pre>
           </div>
+        </div>
+
+        <div class="btns">
+          <a class="btn primary" href="#quickstart">[ get started → ]</a>
+          <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">[ ★ github ]</a>
+        </div>
+        <div class="metaline">
+          <span>MIT</span> · <span>node ≥ 20</span> · <span>agents: claude, codex</span> ·
+          <span>zero server changes</span>
         </div>
       </div>
     </header>
 
-    <!-- ================= PROBLEM / HOW ================= -->
+    <!-- ===== how ===== -->
     <section id="how">
       <div class="wrap">
-        <div class="section-head">
-          <h2>A recording proxy, not a rewrite</h2>
-          <p>
-            bitmcp-eval runs your prompts through a real chat agent, intercepts every call
-            to your MCP server, and checks the observed tool calls against your
-            expectations — multiple times per prompt, because agent behavior has spread.
-          </p>
-        </div>
-
-        <div class="pipe">
-          <div class="stage">
-            <div class="ic">📝</div>
-            <h3>Your prompts</h3>
-            <p>YAML test cases with the tools you expect the agent to call.</p>
-          </div>
-          <div class="arrow">→</div>
-          <div class="stage">
-            <div class="ic">🤖</div>
-            <h3>Real chat agent</h3>
-            <p><code>claude</code> or <code>codex</code>, run headlessly per iteration.</p>
-          </div>
-          <div class="arrow">→</div>
-          <div class="stage">
-            <div class="ic">🛰️</div>
-            <h3>Recording proxy</h3>
-            <p>Forwards MCP traffic byte-for-byte and records every tool call.</p>
-          </div>
-          <div class="arrow">→</div>
-          <div class="stage">
-            <div class="ic">🗄️</div>
-            <h3>Your MCP server</h3>
-            <p>Unchanged. Anything speaking MCP StreamableHTTP works.</p>
-          </div>
-        </div>
-        <p class="pipe-note">
-          The proxy operates on the transport layer — <strong>zero changes to your
-          server</strong> — then validates expected vs. recorded tool calls into a live TUI
-          and a static HTML report.
+        <p class="cmd">bitmcp-eval <span class="flag">--explain</span></p>
+        <h2>A recording proxy, not a rewrite</h2>
+        <p class="say">
+          bitmcp-eval starts a proxy in front of your server and points the agent at it.
+          Every JSON-RPC message is forwarded byte-for-byte while a copy records each
+          <code class="cyan">tools/call</code> — name, arguments, result, error, duration.
+          It runs on the transport layer, so the server under test needs
+          <b>zero changes</b>.
         </p>
+        <div class="term">
+          <div class="titlebar">
+            <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+            <span class="path">pipeline.txt</span>
+          </div>
+          <div class="body">
+<pre>  <span class="dim">prompt</span>          <span class="dim">MCP / StreamableHTTP</span>            <span class="dim">forward + record</span>
+
+┌─────────────┐      ┌──────────────┐      ┌──────────────────┐      ┌─────────────┐
+│  bitmcp-eval│ ───▶ │  chat agent  │ ───▶ │ recording proxy  │ ───▶ │  your MCP   │
+│    (TUI)    │      │ claude/codex │ ◀─── │  <span class="green">tools/call ✓</span>    │ ◀─── │   server    │
+└─────────────┘      └──────────────┘      └──────────────────┘      └─────────────┘
+       ▲                                            │
+       └──────── <span class="yellow">validate expected vs. recorded tool calls</span> ◀─────┘
+                 <span class="dim">→ live TUI + self-contained HTML report</span></pre>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ================= QUICKSTART ================= -->
-    <section id="quickstart" class="quickstart">
+    <!-- ===== quickstart ===== -->
+    <section id="quickstart">
       <div class="wrap">
-        <div class="section-head">
-          <h2>Quickstart</h2>
-          <p>Two minutes against the bundled demo weather server, to verify your toolchain end to end.</p>
-        </div>
-        <div class="cols">
-          <div>
-            <pre><span class="c"># install &amp; build the monorepo</span>
-corepack enable
-yarn install
-yarn build
+        <p class="cmd">cat <span class="flag">QUICKSTART.md</span></p>
+        <h2>Two minutes against the demo server</h2>
+        <p class="say">
+          The bundled demo weather MCP server just verifies your toolchain end to end. Then
+          point <code class="cyan">mcp.url</code> at your own server and write your test cases.
+        </p>
+        <div class="two">
+          <div class="term">
+            <div class="titlebar">
+              <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+              <span class="path">install &amp; run</span>
+            </div>
+            <div class="body">
+<pre><span class="dim"># build the monorepo</span>
+<span class="prompt">corepack enable</span>
+<span class="prompt">yarn install &amp;&amp; yarn build</span>
 
-<span class="c"># terminal 1 — demo MCP server on :3210</span>
-yarn demo-server
+<span class="dim"># term 1 — demo server on :3210</span>
+<span class="prompt">yarn demo-server</span>
 
-<span class="c"># terminal 2 — run the evaluation</span>
-yarn start <span class="p">-c</span> examples/eval.yaml</pre>
+<span class="dim"># term 2 — run the eval</span>
+<span class="prompt">yarn start <span class="yellow">-c</span> examples/eval.yaml</span></pre>
+            </div>
           </div>
-          <div class="side">
-            <h3>You get a verdict, with the spread</h3>
-            <pre><span class="p">✓</span> compare two forecasts  ✓✓ (2/2 passed)
-<span class="p">✓</span> current weather lookup ✓✓ (2/2 passed)
-<span class="p">✓</span> list supported cities  ✓✓ (2/2 passed)
+          <div class="term">
+            <div class="titlebar">
+              <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+              <span class="path">testcases/current-weather.yaml</span>
+            </div>
+            <div class="body">
+<pre><span class="mag">name</span>: current weather lookup
+<span class="mag">prompt</span>: <span class="yellow">'What is the weather in Vienna?'</span>
+<span class="mag">expectedTools</span>:
+  - get_current_weather
 
-3 test cases · 6 iterations
-6 passed · 0 failed · <span class="p">100% pass</span>
-Report: bitmcp-eval-…​.html</pre>
-            <p style="margin-top: 16px">
-              Requires Node ≥ 20 and a recent <code>claude</code> or <code>codex</code> CLI,
-              installed and authenticated. Full setup in the
-              <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
-            </p>
+<span class="dim"># every listed tool must be called</span>
+<span class="dim"># successfully, once per iteration.</span>
+<span class="dim"># run it N times — agent behavior</span>
+<span class="dim"># has spread, so you want 7/10, not</span>
+<span class="dim"># one lucky green check.</span></pre>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ================= FEATURES ================= -->
+    <!-- ===== features ===== -->
     <section id="features">
       <div class="wrap">
-        <div class="section-head">
-          <h2>What's in the box</h2>
-          <p>Everything needed to turn "it seemed to work" into a measured pass rate.</p>
-        </div>
-        <div class="grid">
-          <div class="card">
-            <div class="ic">🛰️</div>
-            <h3>Transport-level proxy</h3>
-            <p>
-              Records every <code>tools/call</code> — name, arguments, result, error state,
-              duration — with no changes to the server under test.
-            </p>
+        <p class="cmd">bitmcp-eval <span class="flag">--features</span></p>
+        <h2>What's in the box</h2>
+        <div class="feat">
+          <div class="f">
+            <h3>transport-level proxy</h3>
+            <p>Records every <code>tools/call</code> with args, result, error state and duration — no changes to the server under test.</p>
           </div>
-          <div class="card">
-            <div class="ic">🤝</div>
+          <div class="f">
             <h3>claude &amp; codex</h3>
-            <p>
-              Run one agent or both. The suite executes once per agent with per-agent pass
-              rates — "does codex use my server as reliably as claude?"
-            </p>
+            <p>Run one agent or both; the suite executes once per agent with per-agent pass rates. Does codex use your server as reliably as claude?</p>
           </div>
-          <div class="card">
-            <div class="ic">🔁</div>
-            <h3>Iterations &amp; spread</h3>
-            <p>
-              Each test case runs N times, because agent behavior varies. You see 7/10, not
-              a single lucky green check.
-            </p>
+          <div class="f">
+            <h3>iterations &amp; spread</h3>
+            <p>Each test case runs N times because agents are non-deterministic. You measure the spread, not a single run.</p>
           </div>
-          <div class="card">
-            <div class="ic">🔐</div>
-            <h3>OAuth, handled</h3>
-            <p>
-              401 is auto-detected; the proxy does authorization-code + PKCE, caches and
-              refreshes tokens. Dynamic client registration needs zero config.
-            </p>
+          <div class="f">
+            <h3>oauth, handled</h3>
+            <p>A <code>401</code> is auto-detected; the proxy runs auth-code + PKCE, caches and refreshes the token. Dynamic client registration needs zero config.</p>
           </div>
-          <div class="card">
-            <div class="ic">⚖️</div>
-            <h3>Optional LLM judge</h3>
-            <p>
-              A second, semantic opinion per iteration (any OpenAI-compatible endpoint). It
-              never overrides the mechanical result — disagreements get flagged.
-            </p>
+          <div class="f">
+            <h3>optional llm judge</h3>
+            <p>A semantic verdict per iteration from any OpenAI-compatible endpoint. Never overrides the mechanical result — disagreements get flagged.</p>
           </div>
-          <div class="card">
-            <div class="ic">📊</div>
-            <h3>Live TUI + HTML report</h3>
-            <p>
-              Watch runs live, then share a self-contained report with each iteration's tool
-              calls, arguments, missing expectations, and full conversation.
-            </p>
+          <div class="f">
+            <h3>live tui + html report</h3>
+            <p>Watch runs live, then share a self-contained report with each iteration's tool calls, missing expectations and full conversation.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ================= CTA ================= -->
-    <section style="text-align: center">
+    <!-- ===== cta ===== -->
+    <section>
       <div class="wrap">
+        <p class="cmd">git clone <span class="flag">https://github.com/bitmovin/bitmcp-eval</span></p>
         <h2>Put your MCP server under test</h2>
-        <p style="color: var(--ink-soft); font-size: 18px; max-width: 620px; margin: 0 auto 28px">
-          Clone the repo, point it at your server, and get a measured pass rate instead of a
-          hunch.
-        </p>
-        <div class="cta">
-          <a class="btn btn-primary" href="https://github.com/bitmovin/bitmcp-eval"
-            >★ Star on GitHub</a
-          >
-          <a class="btn btn-ghost" href="https://github.com/bitmovin/bitmcp-eval#readme"
-            >Read the docs</a
-          >
+        <p class="say">Point it at your server and get a measured pass rate instead of a hunch.</p>
+        <div class="btns">
+          <a class="btn primary" href="https://github.com/bitmovin/bitmcp-eval">[ ★ star on github ]</a>
+          <a class="btn" href="https://github.com/bitmovin/bitmcp-eval#readme">[ read the docs ]</a>
         </div>
       </div>
     </section>
 
-    <!-- ================= FOOTER ================= -->
+    <!-- ===== footer ===== -->
     <footer>
-      <div class="wrap foot">
-        <div class="brand"><span class="dot"></span> bitmcp-eval</div>
-        <div>
-          <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
-          <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">MIT License</a>
-          <a href="https://bitmovin.com">Bitmovin</a>
+      <div class="wrap">
+        <div class="footgrid">
+          <div>MIT © Bitmovin, Inc. — built by the Observability team.</div>
+          <div>
+            <a href="https://github.com/bitmovin/bitmcp-eval">github</a> ·
+            <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">license</a> ·
+            <a href="https://bitmovin.com">bitmovin.com</a>
+          </div>
         </div>
-      </div>
-      <div class="wrap" style="margin-top: 18px; font-size: 13px; color: #7c88ad">
-        MIT © Bitmovin, Inc. · Built by the Observability team.
+        <div class="prompt"><span class="cursor"></span></div>
       </div>
     </footer>
   </body>
