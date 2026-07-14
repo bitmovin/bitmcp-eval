@@ -3,540 +3,259 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>bitmcp-eval — the MCP eval broadsheet</title>
+    <title>bitmcp-eval — evaluate how LLM agents use your MCP server</title>
     <meta
       name="description"
-      content="bitmcp-eval puts LLM agents on the scoreboard: run your prompts through claude and codex, record every tool call through a proxy, and read off a measured pass rate for how each one uses your MCP server."
+      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), records every call to your MCP server through a proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report."
     />
-    <meta property="og:title" content="bitmcp-eval — claude vs codex, scored" />
-    <meta
-      property="og:description"
-      content="Evaluate how LLM agents actually use your MCP server."
-    />
+    <meta property="og:title" content="bitmcp-eval" />
+    <meta property="og:description" content="Evaluate how LLM agents actually use your MCP server." />
+    <meta property="og:type" content="website" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f2ece0'/%3E%3Ctext x='50' y='74' font-family='Georgia,serif' font-size='78' font-weight='bold' text-anchor='middle' fill='%23111'%3EE%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231f6f5c'/%3E%3Ctext x='50' y='71' font-family='Helvetica,Arial,sans-serif' font-size='62' font-weight='bold' text-anchor='middle' fill='%23fff'%3E%E2%9C%93%3C/text%3E%3C/svg%3E"
     />
     <style>
       :root {
-        --paper: #f2ece0;
-        --paper-2: #eae3d4;
-        --ink: #17140d;
-        --ink-2: #4a4436;
-        --ink-3: #7c745f;
-        --spot: #c23a1e; /* single print-ink accent */
-        --rule: #17140d;
-        --hair: rgba(23, 20, 13, 0.28);
-        --serif: Georgia, "Iowan Old Style", "Times New Roman", Times, serif;
-        --sans: "Helvetica Neue", "Arial Narrow", Arial, sans-serif;
-        --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+        --paper: #ffffff;
+        --alt: #f7f7f5;
+        --ink: #1c1e22;
+        --dim: #5f636b;
+        --hair: #e7e7e3;
+        --accent: #1f6f5c;
+        --accent-soft: rgba(31, 111, 92, 0.08);
+        --code-bg: #14181c;
+        --code-ink: #dfe6ea;
+        --radius: 12px;
+        --maxw: 960px;
       }
       * { box-sizing: border-box; }
-      ::selection { background: rgba(194, 58, 30, 0.22); }
       html { scroll-behavior: smooth; }
       body {
         margin: 0;
         background: var(--paper);
         color: var(--ink);
-        font-family: var(--serif);
-        font-size: 18px;
-        line-height: 1.55;
-        text-rendering: optimizeLegibility;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
-      .sheet {
-        max-width: 1040px;
-        margin: 0 auto;
-        padding: 0 26px 60px;
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      code, pre { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+      .eyebrow {
+        display: inline-block; font-size: 12.5px; color: var(--accent);
+        background: var(--accent-soft); border-radius: 999px; padding: 5px 13px;
+        letter-spacing: 0.02em; margin-bottom: 22px;
       }
-      a { color: var(--ink); text-decoration: none; }
-      .kick,
-      .label,
-      .agate,
-      nav,
-      .byline,
-      .dateline,
-      .stamp {
-        font-family: var(--sans);
-      }
-      .rule { border: 0; border-top: 1.5px solid var(--rule); margin: 0; }
-      .rule.double {
-        border: 0;
-        border-top: 3px double var(--rule);
-      }
-      .rule.hair { border-top: 1px solid var(--hair); }
+      h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; margin: 0 0 12px; }
+      .sec-lede { color: var(--dim); font-size: 17px; max-width: 62ch; margin: 0 0 34px; }
 
-      /* ---------- masthead ---------- */
-      .topbar {
-        display: flex;
-        justify-content: space-between;
-        font-family: var(--sans);
-        font-size: 11px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--ink-2);
-        padding: 10px 0 8px;
+      /* nav */
+      header.nav {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 18px 0; border-bottom: 1px solid var(--hair); position: sticky; top: 0;
+        background: rgba(255, 255, 255, 0.9); backdrop-filter: saturate(180%) blur(8px); z-index: 10;
       }
-      .nameplate {
-        text-align: center;
-        padding: 12px 0 6px;
-      }
-      .nameplate h1 {
-        font-family: var(--serif);
-        font-weight: 700;
-        font-size: clamp(48px, 12vw, 128px);
-        line-height: 0.9;
-        letter-spacing: -0.03em;
-        margin: 6px 0 8px;
-      }
-      .nameplate .sub {
-        font-style: italic;
-        font-size: clamp(15px, 2.4vw, 20px);
-        color: var(--ink-2);
-      }
-      .dateline {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 6px;
-        font-size: 11px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--ink-2);
-        padding: 8px 0;
-      }
-      .dateline .mid { color: var(--spot); font-weight: 700; }
+      .brand { font-weight: 700; letter-spacing: -0.01em; font-size: 17px; color: var(--ink); }
+      .brand b { color: var(--accent); }
+      nav.links a { color: var(--dim); font-size: 14.5px; margin-left: 22px; }
+      nav.links a:hover { color: var(--ink); text-decoration: none; }
+      nav.links a.gh { color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 13px; }
+      @media (max-width: 620px) { nav.links a:not(.gh) { display: none; } }
 
-      /* ---------- lead ---------- */
-      .lead { padding: 26px 0 8px; }
-      .kick {
-        color: var(--spot);
-        font-weight: 700;
-        font-size: 13px;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
+      /* hero */
+      .hero { text-align: center; padding: 84px 0 68px; border-bottom: 1px solid var(--hair); }
+      h1 {
+        font-size: clamp(34px, 5.4vw, 56px); line-height: 1.06; letter-spacing: -0.03em;
+        margin: 0 auto 18px; max-width: 17ch;
       }
-      .headline {
-        font-weight: 700;
-        font-size: clamp(34px, 6.4vw, 74px);
-        line-height: 0.98;
-        letter-spacing: -0.02em;
-        margin: 0 0 14px;
+      .hero .lede { color: var(--dim); font-size: clamp(17px, 2.2vw, 20px); max-width: 60ch; margin: 0 auto 30px; }
+      .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600;
+        padding: 12px 22px; border-radius: 9px; border: 1px solid var(--hair); color: var(--ink);
       }
-      .deck {
-        font-size: clamp(18px, 2.6vw, 23px);
-        color: var(--ink-2);
-        max-width: 760px;
-        margin: 0 0 14px;
-      }
-      .byline {
-        font-size: 12px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--ink-3);
-        border-top: 1px solid var(--hair);
-        border-bottom: 1px solid var(--hair);
-        padding: 8px 0;
-        margin-bottom: 22px;
-      }
-      .byline b { color: var(--ink); }
+      .btn:hover { text-decoration: none; border-color: #d3d3ce; }
+      .btn.p { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .btn.p:hover { background: #1a5f4f; }
+      .hero .meta { margin-top: 26px; color: var(--dim); font-size: 13px; }
+      .hero .meta span { white-space: nowrap; }
 
-      /* ---------- main grid ---------- */
-      .cols {
-        display: grid;
-        grid-template-columns: 1.15fr 1fr;
-        gap: 34px;
-        align-items: start;
-      }
-      @media (max-width: 820px) { .cols { grid-template-columns: 1fr; gap: 22px; } }
+      section { padding: 68px 0; border-bottom: 1px solid var(--hair); }
 
-      .story p { margin: 0 0 14px; }
-      .story p:first-of-type::first-letter {
-        float: left;
-        font-weight: 700;
-        font-size: 78px;
-        line-height: 0.66;
-        padding: 8px 10px 0 0;
-        color: var(--spot);
-      }
-      .story .aside {
-        font-family: var(--sans);
-        font-size: 13px;
-        line-height: 1.5;
-        color: var(--ink-2);
-        border-left: 3px solid var(--spot);
-        padding: 2px 0 2px 14px;
-        margin: 18px 0;
-      }
+      /* how it works */
+      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      @media (max-width: 780px) { .steps { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 460px) { .steps { grid-template-columns: 1fr; } }
+      .step { background: var(--alt); border: 1px solid var(--hair); border-radius: var(--radius); padding: 20px 18px; }
+      .step .n { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
+      .step h3 { font-size: 16px; margin: 8px 0 6px; }
+      .step p { margin: 0; color: var(--dim); font-size: 14px; }
+      .note { margin-top: 22px; color: var(--dim); font-size: 15px; }
+      .note b { color: var(--ink); }
 
-      /* ---------- scoreboard ---------- */
-      .board {
-        border: 2px solid var(--rule);
-        padding: 0;
-        background: var(--paper);
-      }
-      .board .cap {
-        background: var(--ink);
-        color: var(--paper);
-        font-family: var(--sans);
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 9px 14px;
-        display: flex;
-        justify-content: space-between;
-      }
-      .board .cap .vs { color: #e6b8ac; }
-      table { width: 100%; border-collapse: collapse; }
-      .board thead th {
-        font-family: var(--sans);
-        text-transform: uppercase;
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        color: var(--ink-2);
-        text-align: right;
-        padding: 10px 14px 6px;
-        border-bottom: 1.5px solid var(--rule);
-      }
-      .board thead th:first-child { text-align: left; }
-      .board tbody td {
-        font-family: var(--serif);
-        padding: 9px 14px;
-        border-bottom: 1px solid var(--hair);
-        font-size: 15px;
-      }
-      .board tbody td.num {
-        font-family: var(--sans);
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-        font-size: 15px;
-        letter-spacing: 0.01em;
-      }
-      .board tbody td .w { color: var(--spot); font-weight: 700; }
-      .board tfoot td {
-        font-family: var(--sans);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        font-weight: 700;
-        font-size: 13px;
-        padding: 11px 14px;
-        border-top: 1.5px solid var(--rule);
-        text-align: right;
-      }
-      .board tfoot td:first-child { text-align: left; }
-      .board tfoot td .big { font-size: 20px; }
-      .board tfoot .lead-cell { color: var(--spot); }
-      .board .foot-note {
-        font-family: var(--sans);
-        font-size: 10.5px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--ink-3);
-        padding: 8px 14px 11px;
-      }
-      .spread {
-        display: flex;
-        justify-content: space-around;
-        border-top: 2px solid var(--rule);
-        text-align: center;
-        font-family: var(--sans);
-      }
-      .spread div { padding: 12px 6px; flex: 1; }
-      .spread div + div { border-left: 1px solid var(--hair); }
-      .spread .k { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
-      .spread .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
-      .spread .v.spot { color: var(--spot); }
-
-      /* ---------- sections ---------- */
-      section { padding: 30px 0 8px; }
-      .sechead {
-        font-family: var(--sans);
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-weight: 700;
-        font-size: 13px;
-        color: var(--spot);
-        margin: 0 0 4px;
-      }
-      .sectitle {
-        font-weight: 700;
-        font-size: clamp(26px, 4vw, 40px);
-        line-height: 1.02;
-        letter-spacing: -0.015em;
-        margin: 0 0 18px;
-      }
-
-      /* pipeline as a ruled diagram */
-      .flow {
-        display: flex;
-        align-items: stretch;
-        flex-wrap: wrap;
-        gap: 0;
-        border: 1.5px solid var(--rule);
-      }
-      .flow .step {
-        flex: 1 1 150px;
-        padding: 16px 14px;
-        border-right: 1px solid var(--hair);
-      }
-      .flow .step:last-child { border-right: 0; }
-      .flow .n {
-        font-family: var(--sans);
-        font-size: 11px;
-        letter-spacing: 0.1em;
-        color: var(--spot);
-        font-weight: 700;
-      }
-      .flow .t { font-weight: 700; font-size: 17px; margin: 3px 0 4px; }
-      .flow .d { font-family: var(--sans); font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
-      .flow-note { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); margin-top: 10px; letter-spacing: 0.02em; }
-
-      /* quickstart insets */
-      .insets { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-      @media (max-width: 720px) { .insets { grid-template-columns: 1fr; } }
-      .inset { border: 1.5px solid var(--rule); }
-      .inset .ihead {
-        font-family: var(--sans);
-        font-size: 11px;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: var(--ink-2);
-        padding: 8px 14px;
-        border-bottom: 1px solid var(--hair);
-        background: var(--paper-2);
-      }
+      /* quickstart */
+      .qs { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+      @media (max-width: 760px) { .qs { grid-template-columns: 1fr; } }
       pre {
-        margin: 0;
-        padding: 14px 16px;
-        font-family: var(--mono);
-        font-size: 13px;
-        line-height: 1.7;
-        overflow-x: auto;
-        color: var(--ink);
+        background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius);
+        padding: 20px 22px; overflow-x: auto; font-size: 13.5px; line-height: 1.75; margin: 0;
       }
-      pre .c { color: var(--ink-3); }
-      pre .s { color: var(--spot); }
+      pre .c { color: #7c8894; }
+      pre .g { color: #7fd6a9; }
+      .qs .side h3 { margin: 0 0 10px; font-size: 17px; }
+      .qs .side p { color: var(--dim); font-size: 15px; }
 
-      /* features as newspaper columns */
-      .scout { columns: 3 220px; column-gap: 30px; column-rule: 1px solid var(--hair); }
-      .scout .item { break-inside: avoid; margin-bottom: 16px; }
-      .scout h3 {
-        font-family: var(--sans);
-        font-size: 13px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin: 0 0 3px;
-      }
-      .scout h3::before { content: "— "; color: var(--spot); }
-      .scout p { margin: 0; font-size: 15px; color: var(--ink-2); line-height: 1.5; }
+      /* features */
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+      @media (max-width: 780px) { .grid { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
+      .card { padding: 4px 0; }
+      .card h3 { font-size: 16px; margin: 0 0 6px; }
+      .card h3::before { content: "●"; color: var(--accent); font-size: 9px; vertical-align: middle; margin-right: 9px; }
+      .card p { margin: 0; color: var(--dim); font-size: 14.5px; }
+      .card code { background: var(--alt); padding: 1px 6px; border-radius: 5px; font-size: 13px; color: var(--ink); }
 
-      /* final / cta */
-      .final { border-top: 3px double var(--rule); border-bottom: 3px double var(--rule); padding: 26px 0; margin-top: 30px; }
-      .ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
-      .ballot {
-        font-family: var(--sans);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        font-size: 13px;
-        border: 1.5px solid var(--rule);
-        padding: 12px 18px;
-      }
-      .ballot:hover { background: var(--ink); color: var(--paper); }
-      .ballot.spot { border-color: var(--spot); color: var(--spot); }
-      .ballot.spot:hover { background: var(--spot); color: var(--paper); }
+      /* cta band */
+      .band { text-align: center; }
+      .band h2 { margin-bottom: 10px; }
+      .band p { color: var(--dim); font-size: 17px; max-width: 54ch; margin: 0 auto 26px; }
 
-      /* colophon */
-      .colophon {
-        font-family: var(--sans);
-        font-size: 11px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--ink-3);
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 22px 0 0;
-      }
-      .colophon a { border-bottom: 1px solid var(--hair); }
+      /* footer */
+      footer { padding: 30px 0; }
+      .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--dim); font-size: 13.5px; }
+      .foot a { color: var(--ink); }
     </style>
   </head>
   <body>
-    <div class="sheet">
-      <!-- ===== masthead ===== -->
-      <div class="topbar">
-        <span>Open Source · MIT</span>
-        <span>Head-to-Head Edition</span>
-        <span>Vol. I · No. 1</span>
-      </div>
-      <hr class="rule double" />
-      <div class="nameplate">
-        <h1>bitmcp&#8202;·&#8202;eval</h1>
-        <div class="sub">Measuring how LLM agents <em>actually</em> use your MCP server</div>
-      </div>
-      <hr class="rule double" />
-      <div class="dateline">
-        <span>Bitmovin Observability · Klagenfurt</span>
-        <span class="mid">Claude&nbsp;vs&nbsp;Codex</span>
-        <span>Price: Free (MIT)</span>
-      </div>
-      <hr class="rule" />
+    <div class="wrap">
+      <header class="nav">
+        <div class="brand">bitmcp<b>-</b>eval</div>
+        <nav class="links">
+          <a href="#how">How it works</a>
+          <a href="#quickstart">Quickstart</a>
+          <a href="#features">Features</a>
+          <a class="gh" href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
+        </nav>
+      </header>
+    </div>
 
-      <!-- ===== lead ===== -->
-      <div class="lead">
-        <div class="kick">The Match</div>
-        <h2 class="headline">Which agent actually uses your MCP server?</h2>
-        <p class="deck">
-          You shipped an MCP server. But do agents pick the right tool for the question —
-          every time, or 7 runs out of 10? bitmcp-eval settles it: same prompts, same
-          server, two agents, scored.
+    <!-- hero -->
+    <div class="hero">
+      <div class="wrap">
+        <span class="eyebrow">Open source · MIT</span>
+        <h1>Evaluate how LLM agents actually use your MCP server</h1>
+        <p class="lede">
+          You wrote an MCP server — but do agents pick the right tool for a given question?
+          bitmcp-eval runs your prompts through a real agent, records every call through a
+          proxy, and validates the tool calls against your expectations.
+        </p>
+        <div class="cta">
+          <a class="btn p" href="#quickstart">Get started</a>
+          <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
+        </div>
+        <div class="meta">
+          <span>Node ≥ 20</span> &nbsp;·&nbsp; <span>agents: claude, codex</span> &nbsp;·&nbsp;
+          <span>zero server changes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- how it works -->
+    <section id="how">
+      <div class="wrap">
+        <h2>A recording proxy, not a rewrite</h2>
+        <p class="sec-lede">
+          bitmcp-eval starts a proxy in front of your server and points the agent at it.
+          Every message is forwarded byte-for-byte while a copy records each tool call.
+        </p>
+        <div class="steps">
+          <div class="step"><div class="n">01</div><h3>Your prompts</h3><p>YAML test cases naming the tools you expect the agent to call.</p></div>
+          <div class="step"><div class="n">02</div><h3>The agent</h3><p>claude or codex, run headlessly, once per iteration.</p></div>
+          <div class="step"><div class="n">03</div><h3>Recording proxy</h3><p>Forwards MCP traffic and records every <code>tools/call</code>.</p></div>
+          <div class="step"><div class="n">04</div><h3>Validate</h3><p>Recorded calls checked against expectations → live TUI + report.</p></div>
+        </div>
+        <p class="note">
+          It operates on the transport layer over MCP StreamableHTTP, so the server under
+          test needs <b>zero changes</b> — local or remote, with headers or OAuth handled
+          transparently.
         </p>
       </div>
-      <div class="byline">By the <b>Observability Team</b> &nbsp;·&nbsp; Filed under Model-Context-Protocol &nbsp;·&nbsp; Reading time 2 min</div>
+    </section>
 
-      <div class="cols">
-        <!-- story -->
-        <div class="story">
-          <p>
-            A recording proxy sits in front of your server and the agent is pointed at it.
-            Every JSON-RPC message is forwarded byte-for-byte while a copy notes each
-            <em>tools/call</em> — the tool, its arguments, the result, whether it errored,
-            and how long it took. Nothing on your server changes.
-          </p>
-          <p>
-            Each test case is run again and again, because agents don't behave the same way
-            twice. What you get back isn't a single lucky green check — it's a pass rate with
-            the spread laid bare, per agent, so "it seemed to work" becomes a number you can
-            stand behind.
-          </p>
-          <div class="aside">
-            The verdict need not be mechanical. An optional LLM judge reads the request, the
-            recorded calls and the full conversation, then files its own semantic opinion —
-            pass, fail or uncertain — and it never overrules the tool-based count. The
-            disagreements are the interesting rows.
-          </div>
-          <p>
-            Two agents ship today — <b>claude</b>, confined to the server under test, and
-            <b>codex</b>, run in a neutral sandbox with its escapes flagged. Run one, or run
-            both and read the head-to-head below.
-          </p>
-        </div>
-
-        <!-- scoreboard -->
-        <div class="board" id="board">
-          <div class="cap"><span>Final — Standings</span><span class="vs">6 iterations each</span></div>
-          <table>
-            <thead>
-              <tr><th>Test case</th><th>Claude</th><th>Codex</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>current weather lookup</td><td class="num"><span class="w">6/6</span></td><td class="num">6/6</td></tr>
-              <tr><td>compare two forecasts</td><td class="num"><span class="w">6/6</span></td><td class="num">4/6</td></tr>
-              <tr><td>list supported cities</td><td class="num"><span class="w">5/6</span></td><td class="num">4/6</td></tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>Pass rate</td>
-                <td class="lead-cell"><span class="big">94%</span></td>
-                <td><span class="big">78%</span></td>
-              </tr>
-            </tfoot>
-          </table>
-          <div class="spread">
-            <div><div class="k">Winner</div><div class="v spot">claude</div></div>
-            <div><div class="k">Spread</div><div class="v">+16</div></div>
-            <div><div class="k">Iterations</div><div class="v">18</div></div>
-          </div>
-          <div class="foot-note">Illustrative run · bundled demo weather server · your mileage varies by prompt</div>
-        </div>
-      </div>
-
-      <!-- ===== how it works ===== -->
-      <section id="how">
-        <hr class="rule" style="margin-bottom:22px" />
-        <div class="sechead">How the match is scored</div>
-        <h2 class="sectitle">A recording proxy, not a rewrite</h2>
-        <div class="flow">
-          <div class="step"><div class="n">01</div><div class="t">Your prompts</div><div class="d">YAML test cases naming the tools you expect the agent to call.</div></div>
-          <div class="step"><div class="n">02</div><div class="t">The agent</div><div class="d">claude or codex, run headlessly, once per iteration.</div></div>
-          <div class="step"><div class="n">03</div><div class="t">The proxy</div><div class="d">Forwards MCP traffic byte-for-byte and records every tools/call.</div></div>
-          <div class="step"><div class="n">04</div><div class="t">The verdict</div><div class="d">Recorded calls validated vs. expectations → live table + HTML report.</div></div>
-        </div>
-        <div class="flow-note">Operates on the transport layer over MCP StreamableHTTP — zero changes to the server under test, local or remote, headers or OAuth handled for you.</div>
-      </section>
-
-      <!-- ===== quickstart ===== -->
-      <section id="quickstart">
-        <hr class="rule" style="margin-bottom:22px" />
-        <div class="sechead">Get in the game</div>
-        <h2 class="sectitle">Two minutes against the demo server</h2>
-        <div class="insets">
-          <div class="inset">
-            <div class="ihead">Terminal — install &amp; run</div>
-<pre><span class="c"># build the monorepo</span>
+    <!-- quickstart -->
+    <section id="quickstart">
+      <div class="wrap">
+        <h2>Quickstart</h2>
+        <p class="sec-lede">Two minutes against the bundled demo weather server, to verify your toolchain end to end.</p>
+        <div class="qs">
+          <pre><span class="c"># install &amp; build the monorepo</span>
 corepack enable
-yarn install &amp;&amp; yarn build
+yarn install
+yarn build
 
-<span class="c"># term 1 — demo server on :3210</span>
+<span class="c"># terminal 1 — demo MCP server on :3210</span>
 yarn demo-server
 
-<span class="c"># term 2 — run the eval</span>
-yarn start <span class="s">-c</span> examples/eval.yaml</pre>
+<span class="c"># terminal 2 — run the evaluation</span>
+yarn start -c examples/eval.yaml</pre>
+          <div class="side">
+            <h3>You get a pass rate, with the spread</h3>
+            <pre><span class="g">✓</span> current weather lookup  2/2 passed
+<span class="g">✓</span> compare two forecasts   2/2 passed
+<span class="g">✓</span> list supported cities   2/2 passed
+
+3 test cases · 6 iterations
+6 passed · 0 failed · <span class="g">100%</span></pre>
+            <p style="margin-top:14px">
+              Then point <code>mcp.url</code> at your own server and write your test cases.
+              Full setup in the <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
+            </p>
           </div>
-          <div class="inset">
-            <div class="ihead">testcases/current-weather.yaml</div>
-<pre>name: current weather lookup
-prompt: <span class="s">'What is the weather in Vienna?'</span>
-expectedTools:
-  - get_current_weather
-
-<span class="c"># every listed tool must be called</span>
-<span class="c"># successfully, once per iteration —</span>
-<span class="c"># point mcp.url at your own server</span>
-<span class="c"># and write your own cases next.</span></pre>
-          </div>
-        </div>
-      </section>
-
-      <!-- ===== features / scouting ===== -->
-      <section id="features">
-        <hr class="rule" style="margin-bottom:22px" />
-        <div class="sechead">Scouting report</div>
-        <h2 class="sectitle">What's on the roster</h2>
-        <div class="scout">
-          <div class="item"><h3>Transport-level proxy</h3><p>Records every tools/call with arguments, result, error state and duration. No changes to the server under test.</p></div>
-          <div class="item"><h3>Claude &amp; codex</h3><p>Run one or both. The suite executes once per agent with per-agent pass rates — a true head-to-head.</p></div>
-          <div class="item"><h3>Iterations &amp; spread</h3><p>Each case runs N times because agents are non-deterministic. You measure the spread, not one run.</p></div>
-          <div class="item"><h3>OAuth, handled</h3><p>A 401 is auto-detected; the proxy runs auth-code + PKCE and refreshes tokens. Dynamic client registration needs no config.</p></div>
-          <div class="item"><h3>Optional LLM judge</h3><p>A semantic verdict per iteration from any OpenAI-compatible endpoint. It flags disagreements; it never overrules the count.</p></div>
-          <div class="item"><h3>Live TUI &amp; HTML report</h3><p>Watch runs live, then share a self-contained report with each iteration's tool calls and full conversation.</p></div>
-        </div>
-      </section>
-
-      <!-- ===== final / cta ===== -->
-      <div class="final">
-        <div class="kick">The Final Word</div>
-        <h2 class="headline" style="font-size:clamp(28px,5vw,52px)">Put your own server on the board.</h2>
-        <div class="ctas">
-          <a class="ballot spot" href="https://github.com/bitmovin/bitmcp-eval">★ Star on GitHub</a>
-          <a class="ballot" href="https://github.com/bitmovin/bitmcp-eval#readme">Read the docs</a>
-          <a class="ballot" href="https://github.com/bitmovin/bitmcp-eval">git clone →</a>
         </div>
       </div>
+    </section>
 
-      <!-- ===== colophon ===== -->
-      <div class="colophon">
-        <span>MCP EVAL — an open-source broadsheet published by Bitmovin, Inc. · MIT.</span>
+    <!-- features -->
+    <section id="features">
+      <div class="wrap">
+        <h2>What's in the box</h2>
+        <p class="sec-lede">Everything needed to turn "it seemed to work" into a measured pass rate.</p>
+        <div class="grid">
+          <div class="card"><h3>Recording proxy</h3><p>Records every <code>tools/call</code> — name, arguments, result, error state and duration — with no changes to the server under test.</p></div>
+          <div class="card"><h3>claude &amp; codex</h3><p>Run one agent or both; the suite executes once per agent with per-agent pass rates.</p></div>
+          <div class="card"><h3>Iterations &amp; spread</h3><p>Each test case runs N times because agents are non-deterministic — you measure the spread, not one run.</p></div>
+          <div class="card"><h3>OAuth, handled</h3><p>A <code>401</code> is auto-detected; the proxy runs auth-code + PKCE and refreshes tokens. Dynamic client registration needs no config.</p></div>
+          <div class="card"><h3>Optional LLM judge</h3><p>A semantic verdict per iteration from any OpenAI-compatible endpoint. It flags disagreements; it never overrules the count.</p></div>
+          <div class="card"><h3>Live TUI &amp; HTML report</h3><p>Watch runs live, then share a self-contained report with each iteration's tool calls and full conversation.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- cta -->
+    <section class="band">
+      <div class="wrap">
+        <h2>Put your MCP server under test</h2>
+        <p>Point it at your server and get a measured pass rate instead of a hunch.</p>
+        <div class="cta">
+          <a class="btn p" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
+          <a class="btn" href="https://github.com/bitmovin/bitmcp-eval#readme">Read the docs</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- footer -->
+    <footer>
+      <div class="wrap foot">
+        <span>MIT © Bitmovin, Inc. — built by the Observability team.</span>
         <span>
           <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a> ·
           <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">License</a> ·
           <a href="https://bitmovin.com">bitmovin.com</a>
         </span>
       </div>
-    </div>
+    </footer>
   </body>
 </html>
