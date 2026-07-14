@@ -228,17 +228,17 @@
           <div class="rbody">
             <div class="meta2">running 3 test cases × 2 iterations · agent: claude</div>
             <div class="case is-done">
-              <span class="nm">start a VOD encoding<span class="chip">→ encoding_createEncoding</span></span>
+              <span class="nm">current weather lookup<span class="chip">→ get_current_weather</span></span>
               <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
               <span class="verdict">2/2</span>
             </div>
             <div class="case is-done">
-              <span class="nm">list player licenses<span class="chip">→ player_listLicenses</span></span>
+              <span class="nm">compare two forecasts<span class="chip">→ get_forecast</span></span>
               <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
               <span class="verdict">2/2</span>
             </div>
             <div class="case is-done">
-              <span class="nm">top playback errors (24h)<span class="chip">→ analytics_queryErrors</span></span>
+              <span class="nm">list supported cities<span class="chip">→ list_supported_cities</span></span>
               <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
               <span class="verdict">2/2</span>
             </div>
@@ -275,7 +275,7 @@
     <section id="quickstart">
       <div class="wrap">
         <h2>Quickstart</h2>
-        <p class="sec-lede">Two minutes against the bundled demo MCP server, to verify your toolchain end to end.</p>
+        <p class="sec-lede">Two minutes against the bundled demo weather server, to verify your toolchain end to end.</p>
         <div class="qs">
           <pre><span class="c"># install &amp; build the monorepo</span>
 corepack enable
@@ -289,10 +289,12 @@ yarn demo-server
 yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="side">
             <h3>You get a pass rate, with the spread</h3>
-            <pre>Run finished
+            <pre><span class="g">✓</span> current weather lookup  2/2 passed
+<span class="g">✓</span> compare two forecasts   2/2 passed
+<span class="g">✓</span> list supported cities   2/2 passed
+
 3 test cases · 6 iterations
-<span class="g">6 passed</span> · 0 failed · <span class="g">100%</span>
-report → bitmcp-eval-….html</pre>
+<span class="g">6 passed</span> · 0 failed · <span class="g">100%</span></pre>
             <p style="margin-top:14px">
               Then point <code>mcp.url</code> at your own server and write your test cases.
               Full setup in the <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
