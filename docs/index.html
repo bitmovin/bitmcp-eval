@@ -91,6 +91,47 @@
       .btn.p:hover { background: var(--brand-ink); border-color: var(--brand-ink); }
       .hero .meta { margin-top: 26px; color: var(--dim); font-size: 13px; }
 
+      /* simulated run panel */
+      .run { max-width: 600px; margin: 44px auto 0; text-align: left; border: 1px solid var(--hair);
+        border-radius: 14px; background: #fff; box-shadow: 0 18px 46px rgba(10, 31, 44, 0.10); overflow: hidden; }
+      .run .rhead { display: flex; align-items: center; justify-content: space-between;
+        padding: 11px 15px; border-bottom: 1px solid var(--hair); background: var(--alt); }
+      .run .rhead .t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--navy); }
+      .run .rhead .mk { width: 16px; height: 16px; border-radius: 5px; background: var(--brand);
+        display: inline-flex; align-items: center; justify-content: center; }
+      .run .rt { display: flex; align-items: center; gap: 10px; }
+      .run .status { font-size: 12px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
+      .run .status.done { color: #1f9d63; }
+      .run .replay { border: 1px solid var(--hair); background: #fff; border-radius: 7px; font: inherit;
+        font-size: 12px; font-weight: 600; color: var(--ink); padding: 5px 11px; cursor: pointer; }
+      .run .replay:hover { border-color: #cfd8de; }
+      .run .rbody { padding: 14px 16px 18px; }
+      .run .meta2 { color: var(--dim); font-size: 12.5px; margin-bottom: 6px;
+        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+      .run .case { display: grid; grid-template-columns: 1fr auto 52px; align-items: center; gap: 12px;
+        padding: 10px 0; border-top: 1px solid var(--hair); }
+      .run .nm { color: var(--ink); font-size: 14px; }
+      .run .chip { display: inline-block; margin-left: 8px; font-size: 11px; color: var(--brand-ink);
+        background: var(--brand-soft); border-radius: 5px; padding: 1px 7px; opacity: 0; transition: opacity .2s;
+        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+      .run .case.is-running .chip { opacity: 1; }
+      .run .dots { display: flex; gap: 5px; }
+      .run .dot { width: 8px; height: 8px; border-radius: 50%; background: #dfe6ea; transition: background .2s; }
+      .run .dot.p { background: #1f9d63; }
+      .run .verdict { text-align: right; font-size: 13px; font-weight: 600; color: var(--dim);
+        font-variant-numeric: tabular-nums; }
+      .run .case.is-done .verdict { color: #1f9d63; }
+      .run .case.is-pending .nm, .run .case.is-pending .verdict { opacity: .4; }
+      .run .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--brand-soft);
+        border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .run .bar { margin-top: 14px; height: 8px; background: #eef2f5; border-radius: 999px; overflow: hidden; }
+      .run .bar > span { display: block; height: 100%; width: 0; background: var(--brand);
+        border-radius: 999px; transition: width .45s ease; }
+      .run .sum { margin-top: 11px; font-size: 13px; color: var(--dim); }
+      .run .sum b { color: var(--navy); }
+      @media (prefers-reduced-motion: reduce) { .run .spin { animation: none; } .run .bar > span, .run .dot { transition: none; } }
+
       section { padding: 68px 0; border-bottom: 1px solid var(--hair); }
 
       /* how it works */
@@ -175,6 +216,36 @@
           <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
         </div>
         <div class="meta">Node ≥ 20 &nbsp;·&nbsp; agents: claude, codex &nbsp;·&nbsp; zero server changes</div>
+
+        <div class="run" id="run" aria-label="Simulated bitmcp-eval run">
+          <div class="rhead">
+            <span class="t"><span class="mk"><svg width="9" height="10" viewBox="0 0 9 10"><path d="M0 0 L9 5 L0 10 Z" fill="#fff"/></svg></span> bitmcp-eval · demo run</span>
+            <span class="rt">
+              <span class="status done">done · 100%</span>
+              <button class="replay" type="button">▶ Replay</button>
+            </span>
+          </div>
+          <div class="rbody">
+            <div class="meta2">running 3 test cases × 2 iterations · agent: claude</div>
+            <div class="case is-done">
+              <span class="nm">current weather lookup<span class="chip">→ get_current_weather</span></span>
+              <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
+              <span class="verdict">2/2</span>
+            </div>
+            <div class="case is-done">
+              <span class="nm">compare two forecasts<span class="chip">→ get_forecast</span></span>
+              <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
+              <span class="verdict">2/2</span>
+            </div>
+            <div class="case is-done">
+              <span class="nm">list supported cities<span class="chip">→ list_cities</span></span>
+              <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
+              <span class="verdict">2/2</span>
+            </div>
+            <div class="bar"><span style="width:100%"></span></div>
+            <div class="sum">3 test cases · 6 iterations · <b>6 passed · 0 failed · 100%</b></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -275,5 +346,48 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
         </span>
       </div>
     </footer>
+
+    <script>
+      (function () {
+        var run = document.getElementById("run");
+        if (!run) return;
+        var cases = Array.prototype.slice.call(run.querySelectorAll(".case"));
+        var bar = run.querySelector(".bar > span");
+        var status = run.querySelector(".status");
+        var replay = run.querySelector(".replay");
+        var total = cases.length * 2;
+        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var timers = [];
+        function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+        function clearAll() { timers.forEach(clearTimeout); timers = []; }
+        function reset() {
+          clearAll();
+          status.textContent = "running…";
+          status.classList.remove("done");
+          bar.style.width = "0%";
+          cases.forEach(function (c) {
+            c.className = "case is-pending";
+            c.querySelectorAll(".dot").forEach(function (d) { d.classList.remove("p"); });
+            c.querySelector(".verdict").textContent = "";
+          });
+        }
+        function play() {
+          reset();
+          var passed = 0, t = 450;
+          cases.forEach(function (c) {
+            var dots = c.querySelectorAll(".dot");
+            var v = c.querySelector(".verdict");
+            at(t, function () { c.className = "case is-running"; v.innerHTML = '<span class="spin"></span>'; });
+            at(t + 650, function () { dots[0].classList.add("p"); passed++; bar.style.width = Math.round((passed / total) * 100) + "%"; });
+            at(t + 1150, function () { dots[1].classList.add("p"); passed++; bar.style.width = Math.round((passed / total) * 100) + "%"; });
+            at(t + 1400, function () { c.className = "case is-done"; v.textContent = "2/2"; });
+            t += 1650;
+          });
+          at(t, function () { status.textContent = "done · 6 passed · 100%"; status.classList.add("done"); });
+        }
+        replay.addEventListener("click", play);
+        if (!reduce) at(600, play);
+      })();
+    </script>
   </body>
 </html>
