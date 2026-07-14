@@ -6,28 +6,31 @@
     <title>bitmcp-eval — evaluate how LLM agents use your MCP server</title>
     <meta
       name="description"
-      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), records every call to your MCP server through a proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report."
+      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), records every call to your MCP server through a proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report. An open-source tool by Bitmovin."
     />
-    <meta property="og:title" content="bitmcp-eval" />
+    <meta property="og:title" content="bitmcp-eval — by Bitmovin" />
     <meta property="og:description" content="Evaluate how LLM agents actually use your MCP server." />
     <meta property="og:type" content="website" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231f6f5c'/%3E%3Ctext x='50' y='71' font-family='Helvetica,Arial,sans-serif' font-size='62' font-weight='bold' text-anchor='middle' fill='%23fff'%3E%E2%9C%93%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231fabe2'/%3E%3Cpath d='M40 32 L70 50 L40 68 Z' fill='%23ffffff'/%3E%3C/svg%3E"
     />
     <style>
       :root {
+        --brand: #1fabe2;        /* Bitmovin blue */
+        --brand-ink: #1690bf;    /* darker blue (hover) */
+        --brand-soft: rgba(31, 171, 226, 0.1);
+        --navy: #0a1f2c;         /* deep brand navy */
+        --navy-2: #0e2a3a;
         --paper: #ffffff;
-        --alt: #f7f7f5;
-        --ink: #1c1e22;
-        --dim: #5f636b;
-        --hair: #e7e7e3;
-        --accent: #1f6f5c;
-        --accent-soft: rgba(31, 111, 92, 0.08);
-        --code-bg: #14181c;
-        --code-ink: #dfe6ea;
+        --alt: #f4f7f9;
+        --ink: #14232e;
+        --dim: #5a6b76;
+        --hair: #e3e9ed;
+        --code-bg: #0a1f2c;
+        --code-ink: #cfe4ef;
         --radius: 12px;
-        --maxw: 960px;
+        --maxw: 980px;
       }
       * { box-sizing: border-box; }
       html { scroll-behavior: smooth; }
@@ -40,48 +43,53 @@
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
-      a { color: var(--accent); text-decoration: none; }
+      a { color: var(--brand-ink); text-decoration: none; }
       a:hover { text-decoration: underline; }
       code, pre { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
       .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
-      .eyebrow {
-        display: inline-block; font-size: 12.5px; color: var(--accent);
-        background: var(--accent-soft); border-radius: 999px; padding: 5px 13px;
-        letter-spacing: 0.02em; margin-bottom: 22px;
-      }
-      h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; margin: 0 0 12px; }
+      h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; margin: 0 0 12px; color: var(--navy); }
       .sec-lede { color: var(--dim); font-size: 17px; max-width: 62ch; margin: 0 0 34px; }
+      .eyebrow {
+        display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--brand-ink);
+        background: var(--brand-soft); border-radius: 999px; padding: 5px 13px;
+        letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 22px;
+      }
+
+      /* brand mark */
+      .logo { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.01em; color: var(--navy); font-size: 17px; }
+      .logo .mark { width: 22px; height: 22px; border-radius: 6px; background: var(--brand); display: inline-flex; align-items: center; justify-content: center; }
+      .logo .mark svg { display: block; }
+      .logo .by { font-weight: 500; color: var(--dim); font-size: 12px; }
 
       /* nav */
       header.nav {
         display: flex; justify-content: space-between; align-items: center;
-        padding: 18px 0; border-bottom: 1px solid var(--hair); position: sticky; top: 0;
-        background: rgba(255, 255, 255, 0.9); backdrop-filter: saturate(180%) blur(8px); z-index: 10;
+        padding: 16px 0; border-bottom: 1px solid var(--hair); position: sticky; top: 0;
+        background: rgba(255, 255, 255, 0.92); backdrop-filter: saturate(180%) blur(8px); z-index: 10;
       }
-      .brand { font-weight: 700; letter-spacing: -0.01em; font-size: 17px; color: var(--ink); }
-      .brand b { color: var(--accent); }
-      nav.links a { color: var(--dim); font-size: 14.5px; margin-left: 22px; }
+      nav.links a { color: var(--dim); font-size: 14.5px; margin-left: 22px; font-weight: 500; }
       nav.links a:hover { color: var(--ink); text-decoration: none; }
-      nav.links a.gh { color: var(--ink); border: 1px solid var(--hair); border-radius: 8px; padding: 7px 13px; }
-      @media (max-width: 620px) { nav.links a:not(.gh) { display: none; } }
+      nav.links a.gh { color: #fff; background: var(--brand); border-radius: 8px; padding: 8px 14px; }
+      nav.links a.gh:hover { background: var(--brand-ink); }
+      @media (max-width: 640px) { nav.links a:not(.gh) { display: none; } }
 
       /* hero */
-      .hero { text-align: center; padding: 84px 0 68px; border-bottom: 1px solid var(--hair); }
+      .hero { text-align: center; padding: 88px 0 70px; border-bottom: 1px solid var(--hair); }
       h1 {
-        font-size: clamp(34px, 5.4vw, 56px); line-height: 1.06; letter-spacing: -0.03em;
-        margin: 0 auto 18px; max-width: 17ch;
+        font-size: clamp(34px, 5.4vw, 58px); line-height: 1.05; letter-spacing: -0.03em;
+        margin: 0 auto 18px; max-width: 17ch; color: var(--navy);
       }
+      h1 .hl { color: var(--brand); }
       .hero .lede { color: var(--dim); font-size: clamp(17px, 2.2vw, 20px); max-width: 60ch; margin: 0 auto 30px; }
       .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
       .btn {
         display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600;
-        padding: 12px 22px; border-radius: 9px; border: 1px solid var(--hair); color: var(--ink);
+        padding: 12px 22px; border-radius: 8px; border: 1px solid var(--hair); color: var(--ink); background: #fff;
       }
-      .btn:hover { text-decoration: none; border-color: #d3d3ce; }
-      .btn.p { background: var(--accent); color: #fff; border-color: var(--accent); }
-      .btn.p:hover { background: #1a5f4f; }
+      .btn:hover { text-decoration: none; border-color: #cfd8de; }
+      .btn.p { background: var(--brand); color: #fff; border-color: var(--brand); }
+      .btn.p:hover { background: var(--brand-ink); border-color: var(--brand-ink); }
       .hero .meta { margin-top: 26px; color: var(--dim); font-size: 13px; }
-      .hero .meta span { white-space: nowrap; }
 
       section { padding: 68px 0; border-bottom: 1px solid var(--hair); }
 
@@ -90,8 +98,8 @@
       @media (max-width: 780px) { .steps { grid-template-columns: 1fr 1fr; } }
       @media (max-width: 460px) { .steps { grid-template-columns: 1fr; } }
       .step { background: var(--alt); border: 1px solid var(--hair); border-radius: var(--radius); padding: 20px 18px; }
-      .step .n { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
-      .step h3 { font-size: 16px; margin: 8px 0 6px; }
+      .step .n { font-size: 12px; font-weight: 700; color: var(--brand); letter-spacing: 0.04em; }
+      .step h3 { font-size: 16px; margin: 8px 0 6px; color: var(--navy); }
       .step p { margin: 0; color: var(--dim); font-size: 14px; }
       .note { margin-top: 22px; color: var(--dim); font-size: 15px; }
       .note b { color: var(--ink); }
@@ -103,36 +111,46 @@
         background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius);
         padding: 20px 22px; overflow-x: auto; font-size: 13.5px; line-height: 1.75; margin: 0;
       }
-      pre .c { color: #7c8894; }
-      pre .g { color: #7fd6a9; }
-      .qs .side h3 { margin: 0 0 10px; font-size: 17px; }
+      pre .c { color: #6f8797; }
+      pre .g { color: #58d0a6; }
+      pre .b { color: var(--brand); }
+      .qs .side h3 { margin: 0 0 10px; font-size: 17px; color: var(--navy); }
       .qs .side p { color: var(--dim); font-size: 15px; }
 
       /* features */
-      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 26px; }
       @media (max-width: 780px) { .grid { grid-template-columns: 1fr 1fr; } }
       @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
-      .card { padding: 4px 0; }
-      .card h3 { font-size: 16px; margin: 0 0 6px; }
-      .card h3::before { content: "●"; color: var(--accent); font-size: 9px; vertical-align: middle; margin-right: 9px; }
+      .card h3 { font-size: 16px; margin: 0 0 6px; color: var(--navy); }
+      .card h3::before { content: "▶"; color: var(--brand); font-size: 10px; vertical-align: middle; margin-right: 9px; }
       .card p { margin: 0; color: var(--dim); font-size: 14.5px; }
       .card code { background: var(--alt); padding: 1px 6px; border-radius: 5px; font-size: 13px; color: var(--ink); }
 
-      /* cta band */
-      .band { text-align: center; }
-      .band h2 { margin-bottom: 10px; }
-      .band p { color: var(--dim); font-size: 17px; max-width: 54ch; margin: 0 auto 26px; }
+      /* dark CTA band (bitmovin-style) */
+      .band { background: var(--navy); color: #fff; text-align: center; border: 0;
+        background-image: radial-gradient(90% 120% at 50% 0%, rgba(31,171,226,0.18), transparent 55%); }
+      .band h2 { color: #fff; margin-bottom: 10px; }
+      .band p { color: #b7c6d0; font-size: 17px; max-width: 54ch; margin: 0 auto 26px; }
+      .band .btn { background: transparent; color: #fff; border-color: rgba(255,255,255,0.25); }
+      .band .btn:hover { border-color: #fff; }
+      .band .btn.p { background: var(--brand); border-color: var(--brand); }
+      .band .btn.p:hover { background: var(--brand-ink); }
 
       /* footer */
-      footer { padding: 30px 0; }
-      .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--dim); font-size: 13.5px; }
-      .foot a { color: var(--ink); }
+      footer { background: var(--navy); color: #93a6b2; padding: 30px 0; }
+      .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13.5px; }
+      .foot a { color: #d5e2ea; }
+      .foot .logo { color: #fff; }
+      .foot .logo .by { color: #93a6b2; }
     </style>
   </head>
   <body>
     <div class="wrap">
       <header class="nav">
-        <div class="brand">bitmcp<b>-</b>eval</div>
+        <span class="logo">
+          <span class="mark"><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff"/></svg></span>
+          bitmcp-eval <span class="by">by Bitmovin</span>
+        </span>
         <nav class="links">
           <a href="#how">How it works</a>
           <a href="#quickstart">Quickstart</a>
@@ -146,7 +164,7 @@
     <div class="hero">
       <div class="wrap">
         <span class="eyebrow">Open source · MIT</span>
-        <h1>Evaluate how LLM agents actually use your MCP server</h1>
+        <h1>Evaluate how LLM agents actually <span class="hl">use</span> your MCP server</h1>
         <p class="lede">
           You wrote an MCP server — but do agents pick the right tool for a given question?
           bitmcp-eval runs your prompts through a real agent, records every call through a
@@ -156,10 +174,7 @@
           <a class="btn p" href="#quickstart">Get started</a>
           <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
         </div>
-        <div class="meta">
-          <span>Node ≥ 20</span> &nbsp;·&nbsp; <span>agents: claude, codex</span> &nbsp;·&nbsp;
-          <span>zero server changes</span>
-        </div>
+        <div class="meta">Node ≥ 20 &nbsp;·&nbsp; agents: claude, codex &nbsp;·&nbsp; zero server changes</div>
       </div>
     </div>
 
@@ -200,7 +215,7 @@ yarn build
 yarn demo-server
 
 <span class="c"># terminal 2 — run the evaluation</span>
-yarn start -c examples/eval.yaml</pre>
+yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="side">
             <h3>You get a pass rate, with the spread</h3>
             <pre><span class="g">✓</span> current weather lookup  2/2 passed
@@ -234,7 +249,7 @@ yarn start -c examples/eval.yaml</pre>
       </div>
     </section>
 
-    <!-- cta -->
+    <!-- cta band -->
     <section class="band">
       <div class="wrap">
         <h2>Put your MCP server under test</h2>
@@ -249,10 +264,13 @@ yarn start -c examples/eval.yaml</pre>
     <!-- footer -->
     <footer>
       <div class="wrap foot">
-        <span>MIT © Bitmovin, Inc. — built by the Observability team.</span>
+        <span class="logo">
+          <span class="mark"><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff"/></svg></span>
+          bitmcp-eval <span class="by">by Bitmovin</span>
+        </span>
         <span>
           <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a> ·
-          <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">License</a> ·
+          <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">License (MIT)</a> ·
           <a href="https://bitmovin.com">bitmovin.com</a>
         </span>
       </div>
