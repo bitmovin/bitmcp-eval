@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bitmcp-eval — hand-drawn preview</title>
+    <style>
+      :root {
+        --paper: #fbfaf6;
+        --ink: #24303a;
+        --dim: #6a7680;
+        --accent: #ef6a3d;
+        --blue: #3d7bef;
+        --line: #24303a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--paper); color: var(--ink);
+        font-family: "Comic Sans MS", "Segoe Print", "Bradley Hand", "Chalkboard SE", "Comic Neue", cursive, sans-serif;
+        line-height: 1.55;
+        background-image: radial-gradient(rgba(36,48,58,0.05) 1px, transparent 1px);
+        background-size: 22px 22px;
+      }
+      .wrap { max-width: 940px; margin: 0 auto; padding: 24px; }
+      .top { display: flex; justify-content: space-between; align-items: center; }
+      .logo { font-size: 24px; font-weight: 700; }
+      .logo::before { content: "✎ "; color: var(--accent); }
+      .top a { color: var(--ink); text-decoration: none; border: 2.5px solid var(--ink);
+        border-radius: 14px 10px 16px 9px; padding: 7px 14px; font-size: 14px; }
+      h1 { font-size: clamp(30px, 6vw, 58px); line-height: 1.05; margin: 30px 0 8px; }
+      h1 u { text-decoration-color: var(--accent); text-decoration-thickness: 4px; text-underline-offset: 4px; }
+      .sub { font-size: 18px; color: var(--dim); max-width: 40ch; }
+      .sketchbox { border: 2.5px solid var(--line); border-radius: 18px 12px 20px 10px; padding: 16px 18px;
+        background: #fff; box-shadow: 3px 4px 0 rgba(36,48,58,0.12); }
+      .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 28px 0; font-size: 15px; }
+      .flow .n { border: 2.5px solid var(--line); border-radius: 14px 9px 15px 8px; padding: 8px 12px; background:#fff; }
+      .flow .n.hl { background: #fff3ec; border-color: var(--accent); }
+      .flow .ar { color: var(--accent); font-size: 22px; font-weight: 700; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
+      @media (max-width:760px){ .row{grid-template-columns:1fr;} h1{font-size:34px;} }
+      .cap { font-size: 15px; color: var(--dim); margin-bottom: 10px; }
+      .cap::before { content: "❯ "; color: var(--blue); }
+      .bar { display:flex; align-items:center; gap:10px; margin:12px 0; }
+      .bar .nm { width: 70px; font-size: 16px; }
+      .bar .t { flex:1; height: 20px; border: 2.5px solid var(--line); border-radius: 10px; background:#fff; overflow:hidden;}
+      .bar .f { height: 100%; background: repeating-linear-gradient(45deg,var(--accent),var(--accent) 6px,#ff8a63 6px,#ff8a63 12px); }
+      .bar .f.b { background: repeating-linear-gradient(45deg,var(--blue),var(--blue) 6px,#6f9cff 6px,#6f9cff 12px); }
+      .bar .p { width: 46px; text-align:right; font-weight:700; }
+      .note { font-size: 14px; color: var(--dim); }
+      .feat p { margin: 8px 0; font-size: 15px; }
+      .feat p::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+      .cta { display:inline-block; margin-top: 26px; border: 3px solid var(--line);
+        border-radius: 18px 11px 20px 10px; background: var(--accent); color:#fff; text-decoration:none;
+        font-size: 19px; padding: 12px 22px; box-shadow: 3px 4px 0 rgba(36,48,58,0.2); }
+      .tag{font-size:12px;color:var(--dim);margin-top:26px;}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="top"><span class="logo">bitmcp-eval</span><a href="https://github.com/bitmovin/bitmcp-eval">github →</a></div>
+      <h1>Do your agents <u>actually</u> use your MCP server right?</h1>
+      <p class="sub">Hand them your prompts, run it a bunch of times, and see who picks the right tool.</p>
+
+      <div class="flow">
+        <span class="n">prompt</span><span class="ar">→</span>
+        <span class="n">agent</span><span class="ar">→</span>
+        <span class="n hl">proxy (records!)</span><span class="ar">→</span>
+        <span class="n">your server</span>
+        <span class="ar">↺</span><span class="n">validate ✓</span>
+      </div>
+
+      <div class="row">
+        <div class="sketchbox">
+          <div class="cap">claude vs codex</div>
+          <div class="bar"><span class="nm">claude</span><span class="t"><span class="f" style="width:94%"></span></span><span class="p">94%</span></div>
+          <div class="bar"><span class="nm">codex</span><span class="t"><span class="f b" style="width:78%"></span></span><span class="p">78%</span></div>
+          <p class="note">winner: claude · spread +16 · 18 runs</p>
+        </div>
+        <div class="sketchbox feat">
+          <div class="cap">the good stuff</div>
+          <p>zero changes to your server</p>
+          <p>claude &amp; codex, head to head</p>
+          <p>runs N times — see the spread</p>
+          <p>optional LLM judge</p>
+        </div>
+      </div>
+
+      <a class="cta" href="https://github.com/bitmovin/bitmcp-eval">try it on your server →</a>
+      <div class="tag">preview 3/5 · hand-drawn / sketch · (final version would use a real sketch font)</div>
+    </div>
+  </body>
+</html>
