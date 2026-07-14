@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bitmcp-eval — design previews</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #0f1115; color: #e7ebf2;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.5; }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      p.intro { color: #9aa3b2; margin: 0 0 34px; max-width: 70ch; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 26px; }
+      .card { background: #161a21; border: 1px solid #262c37; border-radius: 12px; overflow: hidden; }
+      .thumb { position: relative; height: 260px; overflow: hidden; border-bottom: 1px solid #262c37; background:#fff; }
+      .thumb iframe { position: absolute; top: 0; left: 0; width: 1200px; height: 900px;
+        border: 0; transform: scale(0.42); transform-origin: top left; pointer-events: none; }
+      .thumb a.hit { position:absolute; inset:0; z-index:2; }
+      .meta { padding: 14px 16px 16px; }
+      .meta .num { color: #6b7484; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .meta h2 { font-size: 17px; margin: 3px 0 6px; }
+      .meta p { margin: 0 0 12px; color: #9aa3b2; font-size: 13.5px; }
+      .meta a.open { color: #7fd1ff; text-decoration: none; font-size: 14px; font-weight: 600; }
+      .meta a.open:hover { text-decoration: underline; }
+      .foot { margin-top: 40px; color: #6b7484; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>bitmcp-eval — design previews</h1>
+      <p class="intro">Five directions to compare, each showing the claude-vs-codex angle. Click any one to open it full-screen. Tell me the number you want and I'll build it out fully and make it the site.</p>
+      <div class="grid">
+
+        <div class="card">
+          <div class="thumb"><a class="hit" href="brutalist.html"></a><iframe src="brutalist.html" title="neo-brutalist" scrolling="no"></iframe></div>
+          <div class="meta"><div class="num">Preview 1</div><h2>Neo-brutalist</h2><p>Loud, thick black borders, hard shadows, flat bright color.</p><a class="open" href="brutalist.html">Open full →</a></div>
+        </div>
+
+        <div class="card">
+          <div class="thumb"><a class="hit" href="swiss.html"></a><iframe src="swiss.html" title="swiss minimal" scrolling="no"></iframe></div>
+          <div class="meta"><div class="num">Preview 2</div><h2>Swiss minimal</h2><p>Quiet, white, strict grid, one accent, precise type.</p><a class="open" href="swiss.html">Open full →</a></div>
+        </div>
+
+        <div class="card">
+          <div class="thumb"><a class="hit" href="sketch.html"></a><iframe src="sketch.html" title="hand-drawn" scrolling="no"></iframe></div>
+          <div class="meta"><div class="num">Preview 3</div><h2>Hand-drawn / sketch</h2><p>Human, wobbly boxes, notebook feel, casual annotations.</p><a class="open" href="sketch.html">Open full →</a></div>
+        </div>
+
+        <div class="card">
+          <div class="thumb"><a class="hit" href="blueprint.html"></a><iframe src="blueprint.html" title="blueprint" scrolling="no"></iframe></div>
+          <div class="meta"><div class="num">Preview 4</div><h2>Blueprint / drafting</h2><p>Technical, drafting paper, line diagrams, title block.</p><a class="open" href="blueprint.html">Open full →</a></div>
+        </div>
+
+        <div class="card">
+          <div class="thumb"><a class="hit" href="classic.html"></a><iframe src="classic.html" title="classic" scrolling="no"></iframe></div>
+          <div class="meta"><div class="num">Preview 5</div><h2>Classic</h2><p>Timeless, clean, professional product page — done tastefully.</p><a class="open" href="classic.html">Open full →</a></div>
+        </div>
+
+      </div>
+      <p class="foot">Previews are temporary and live under /previews/. The main site is unchanged until you pick one.</p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bitmcp-eval — classic preview</title>
+    <style>
+      :root {
+        --paper: #ffffff;
+        --alt: #f7f7f5;
+        --ink: #1c1e22;
+        --dim: #5f636b;
+        --hair: #e7e7e3;
+        --accent: #1f6f5c; /* muted evergreen */
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--paper); color: var(--ink);
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+        font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px; }
+      header.nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--hair); }
+      .brand { font-weight: 700; letter-spacing: -0.01em; }
+      .brand b { color: var(--accent); }
+      .nav a { color: var(--dim); text-decoration: none; font-size: 14px; margin-left: 20px; }
+      .nav a:hover { color: var(--ink); }
+      .nav .gh { color: var(--ink); border: 1px solid var(--hair); border-radius: 7px; padding: 7px 12px; }
+      .hero { padding: 72px 0 48px; text-align: center; }
+      .pill { display:inline-block; font-size: 12px; color: var(--accent); background: rgba(31,111,92,0.08);
+        border-radius: 999px; padding: 5px 12px; letter-spacing: 0.02em; margin-bottom: 20px; }
+      h1 { font-size: clamp(32px, 5.2vw, 52px); line-height: 1.08; letter-spacing: -0.025em; margin: 0 auto 16px; max-width: 16ch; }
+      .lede { color: var(--dim); font-size: 19px; max-width: 60ch; margin: 0 auto 28px; }
+      .cta { display:flex; gap:12px; justify-content:center; }
+      .btn { text-decoration:none; font-size:15px; font-weight:600; padding: 11px 20px; border-radius: 8px; border:1px solid var(--hair); color: var(--ink); }
+      .btn.p { background: var(--accent); color:#fff; border-color: var(--accent); }
+      .panel { background: var(--alt); border: 1px solid var(--hair); border-radius: 14px; padding: 26px; margin: 40px 0; }
+      .panel h2 { font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); margin: 0 0 18px; font-weight: 600; }
+      .score .r { display: grid; grid-template-columns: 80px 1fr 52px; align-items: center; gap: 16px; margin: 12px 0; }
+      .score .nm { font-weight: 600; font-size: 15px; }
+      .score .track { height: 10px; background: #e9e9e5; border-radius: 999px; overflow: hidden; }
+      .score .track > span { display:block; height:100%; background: var(--accent); border-radius: 999px; }
+      .score .track > span.b { background: #b9c0be; }
+      .score .v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .score .meta { color: var(--dim); font-size: 13px; margin-top: 14px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+      @media (max-width: 760px){ .grid{ grid-template-columns:1fr; } }
+      .grid .c h3 { font-size: 15px; margin: 0 0 4px; }
+      .grid .c h3::before { content: "●"; color: var(--accent); font-size: 10px; margin-right: 8px; vertical-align: middle; }
+      .grid .c p { margin: 0; color: var(--dim); font-size: 14px; }
+      footer { border-top: 1px solid var(--hair); padding: 26px 0; color: var(--dim); font-size: 13px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+      footer a{ color: var(--ink); text-decoration:none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="nav">
+        <div class="brand">bitmcp<b>-</b>eval</div>
+        <nav>
+          <a href="#">How it works</a>
+          <a href="#">Quickstart</a>
+          <a class="gh" href="https://github.com/bitmovin/bitmcp-eval">GitHub</a>
+        </nav>
+      </header>
+
+      <div class="hero">
+        <span class="pill">Open source · MIT</span>
+        <h1>Evaluate how LLM agents actually use your MCP server</h1>
+        <p class="lede">Run your prompts through a real agent, record every tool call through a proxy, and validate them against your expectations — over many runs, per agent.</p>
+        <div class="cta">
+          <a class="btn p" href="https://github.com/bitmovin/bitmcp-eval">Get started</a>
+          <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
+        </div>
+      </div>
+
+      <div class="panel score">
+        <h2>Claude vs Codex — pass rate</h2>
+        <div class="r"><span class="nm">claude</span><span class="track"><span style="width:94%"></span></span><span class="v">94%</span></div>
+        <div class="r"><span class="nm">codex</span><span class="track"><span class="b" style="width:78%"></span></span><span class="v">78%</span></div>
+        <div class="meta">18 iterations · spread +16 · illustrative run against the demo server</div>
+      </div>
+
+      <div class="grid">
+        <div class="c"><h3>Recording proxy</h3><p>Zero changes to the server under test — records every tools/call.</p></div>
+        <div class="c"><h3>Iterations &amp; spread</h3><p>Each case runs N times, so you measure behavior, not luck.</p></div>
+        <div class="c"><h3>OAuth, handled</h3><p>Auto-detected; auth-code + PKCE with silent refresh.</p></div>
+        <div class="c"><h3>claude &amp; codex</h3><p>Run one or both, with per-agent pass rates.</p></div>
+        <div class="c"><h3>Optional LLM judge</h3><p>A semantic second opinion that never overrules the count.</p></div>
+        <div class="c"><h3>HTML report</h3><p>Self-contained, with every call and full conversation.</p></div>
+      </div>
+
+      <footer>
+        <span>bitmcp-eval — Bitmovin Observability · MIT</span>
+        <span><a href="https://github.com/bitmovin/bitmcp-eval">Docs →</a> &nbsp; preview 5/5 · classic</span>
+      </footer>
+    </div>
+  </body>
+</html>
