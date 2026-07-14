@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bitmcp-eval — swiss minimal preview</title>
+    <style>
+      :root {
+        --paper: #ffffff;
+        --ink: #111111;
+        --dim: #8a8a8a;
+        --hair: #e2e2e2;
+        --accent: #e5311f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--paper); color: var(--ink);
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+      .top { display: flex; justify-content: space-between; padding: 22px 0; font-size: 12px;
+        letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--hair); }
+      .top a { color: var(--ink); text-decoration: none; }
+      .num { color: var(--accent); }
+      .hero { padding: 96px 0 80px; }
+      h1 { font-size: clamp(30px, 5vw, 52px); font-weight: 600; letter-spacing: -0.02em;
+        line-height: 1.06; margin: 0; max-width: 15ch; }
+      .lede { color: var(--dim); font-size: 18px; max-width: 46ch; margin: 24px 0 0; }
+      .grid { display: grid; grid-template-columns: 3fr 2fr; gap: 60px; padding: 60px 0;
+        border-top: 1px solid var(--hair); }
+      @media (max-width: 760px){ .grid{ grid-template-columns:1fr; gap:36px;} .hero{padding:60px 0;} }
+      .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); margin-bottom: 20px; }
+      .score .r { display: grid; grid-template-columns: 70px 1fr 46px; align-items: center;
+        gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+      .score .r:first-child { border-top: 1px solid var(--hair); }
+      .score .nm { font-size: 15px; }
+      .score .track { height: 2px; background: var(--hair); position: relative; }
+      .score .track > span { position:absolute; left:0; top:0; height:2px; background: var(--ink); }
+      .score .track > span.a { background: var(--accent); height: 4px; top: -1px; }
+      .score .v { text-align: right; font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; }
+      .score .v.a { color: var(--accent); }
+      .meta { margin-top: 22px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+      .feat div { padding: 14px 0; border-bottom: 1px solid var(--hair); }
+      .feat b { font-weight: 600; font-size: 15px; }
+      .feat p { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
+      .foot { display:flex; justify-content:space-between; padding: 40px 0; font-size:12px;
+        letter-spacing:0.06em; text-transform:uppercase; color:var(--dim); border-top:1px solid var(--hair);}
+      .foot a{color:var(--ink); text-decoration:none;}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="top">
+        <span><span class="num">01</span> &nbsp; bitmcp-eval</span>
+        <span><a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a> &nbsp;·&nbsp; MIT</span>
+      </div>
+
+      <div class="hero">
+        <h1>Evaluate how LLM agents actually use your MCP server.</h1>
+        <p class="lede">Run your prompts through a real agent, record every tool call through a proxy, and read off a measured pass rate — per agent, over many runs.</p>
+      </div>
+
+      <div class="grid">
+        <div class="score">
+          <div class="label"><span class="num">02</span> &nbsp; Claude vs Codex — pass rate</div>
+          <div class="r"><span class="nm">claude</span><span class="track"><span class="a" style="width:94%"></span></span><span class="v a">94</span></div>
+          <div class="r"><span class="nm">codex</span><span class="track"><span style="width:78%"></span></span><span class="v">78</span></div>
+          <div class="meta">18 iterations · spread +16 · demo server</div>
+        </div>
+        <div class="feat">
+          <div class="label"><span class="num">03</span> &nbsp; Notes</div>
+          <div><b>Recording proxy</b><p>No changes to the server under test.</p></div>
+          <div><b>Iterations &amp; spread</b><p>Measure behavior, not one run.</p></div>
+          <div><b>OAuth, handled</b><p>Auth-code + PKCE, auto-refreshed.</p></div>
+          <div><b>Optional LLM judge</b><p>Semantic verdict; flags disagreements.</p></div>
+        </div>
+      </div>
+
+      <div class="foot">
+        <span>bitmcp-eval — Bitmovin Observability</span>
+        <span><a href="https://github.com/bitmovin/bitmcp-eval">Read the docs →</a></span>
+      </div>
+      <div class="foot" style="border:0;padding-top:0;">preview 2/5 · swiss minimal</div>
+    </div>
+  </body>
+</html>
