@@ -4,6 +4,24 @@
   "description": "Core engine of bitmcp-eval: recording proxy, test case loading, agent invocation, validation, and reporting",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitmovin/bitmcp-eval.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://bitmovin.github.io/bitmcp-eval/",
+  "bugs": "https://github.com/bitmovin/bitmcp-eval/issues",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "evaluation",
+    "llm",
+    "agent",
+    "testing"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
