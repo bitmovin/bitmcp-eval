@@ -17,10 +17,10 @@
     />
     <style>
       :root {
-        --brand: #1fabe2;        /* Bitmovin blue */
-        --brand-ink: #1690bf;    /* darker blue (hover) */
+        --brand: #1fabe2; /* Bitmovin blue */
+        --brand-ink: #1690bf; /* darker blue (hover) */
         --brand-soft: rgba(31, 171, 226, 0.1);
-        --navy: #0a1f2c;         /* deep brand navy */
+        --navy: #0a1f2c; /* deep brand navy */
         --navy-2: #0e2a3a;
         --paper: #ffffff;
         --alt: #f4f7f9;
@@ -32,164 +32,571 @@
         --radius: 12px;
         --maxw: 980px;
       }
-      * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         margin: 0;
         background: var(--paper);
         color: var(--ink);
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
         font-size: 16px;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
-      a { color: var(--brand-ink); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      code, pre { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
-      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
-      h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; margin: 0 0 12px; color: var(--navy); }
-      .sec-lede { color: var(--dim); font-size: 17px; max-width: 62ch; margin: 0 0 34px; }
+      a {
+        color: var(--brand-ink);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      code,
+      pre {
+        font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+      }
+      .wrap {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 0 28px;
+      }
+      h2 {
+        font-size: clamp(24px, 3.4vw, 34px);
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+        color: var(--navy);
+      }
+      .sec-lede {
+        color: var(--dim);
+        font-size: 17px;
+        max-width: 62ch;
+        margin: 0 0 34px;
+      }
       .eyebrow {
-        display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--brand-ink);
-        background: var(--brand-soft); border-radius: 999px; padding: 5px 13px;
-        letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 22px;
+        display: inline-block;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--brand-ink);
+        background: var(--brand-soft);
+        border-radius: 999px;
+        padding: 5px 13px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        margin-bottom: 22px;
       }
 
       /* brand mark */
-      .logo { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.01em; color: var(--navy); font-size: 17px; }
-      .logo .mark { width: 22px; height: 22px; border-radius: 6px; background: var(--brand); display: inline-flex; align-items: center; justify-content: center; }
-      .logo .mark svg { display: block; }
-      .logo .by { font-weight: 500; color: var(--dim); font-size: 12px; }
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--navy);
+        font-size: 17px;
+      }
+      .logo .mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--brand);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .logo .mark svg {
+        display: block;
+      }
+      .logo .by {
+        font-weight: 500;
+        color: var(--dim);
+        font-size: 12px;
+      }
 
       /* nav */
       header.nav {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 16px 0; border-bottom: 1px solid var(--hair); position: sticky; top: 0;
-        background: rgba(255, 255, 255, 0.92); backdrop-filter: saturate(180%) blur(8px); z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--hair);
+        position: sticky;
+        top: 0;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: saturate(180%) blur(8px);
+        z-index: 10;
       }
-      nav.links a { color: var(--dim); font-size: 14.5px; margin-left: 22px; font-weight: 500; }
-      nav.links a:hover { color: var(--ink); text-decoration: none; }
-      nav.links a.gh { color: #fff; background: var(--brand); border-radius: 8px; padding: 8px 14px; }
-      nav.links a.gh:hover { background: var(--brand-ink); }
-      @media (max-width: 640px) { nav.links a:not(.gh) { display: none; } }
+      nav.links a {
+        color: var(--dim);
+        font-size: 14.5px;
+        margin-left: 22px;
+        font-weight: 500;
+      }
+      nav.links a:hover {
+        color: var(--ink);
+        text-decoration: none;
+      }
+      nav.links a.gh {
+        color: #fff;
+        background: var(--brand);
+        border-radius: 8px;
+        padding: 8px 14px;
+      }
+      nav.links a.gh:hover {
+        background: var(--brand-ink);
+      }
+      @media (max-width: 640px) {
+        nav.links a:not(.gh) {
+          display: none;
+        }
+      }
 
       /* hero */
-      .hero { text-align: center; padding: 88px 0 70px; border-bottom: 1px solid var(--hair); }
+      .hero {
+        text-align: center;
+        padding: 88px 0 70px;
+        border-bottom: 1px solid var(--hair);
+      }
       h1 {
-        font-size: clamp(34px, 5.4vw, 58px); line-height: 1.05; letter-spacing: -0.03em;
-        margin: 0 auto 18px; max-width: 17ch; color: var(--navy);
+        font-size: clamp(34px, 5.4vw, 58px);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        margin: 0 auto 18px;
+        max-width: 17ch;
+        color: var(--navy);
       }
-      h1 .hl { color: var(--brand); }
-      .hero .lede { color: var(--dim); font-size: clamp(17px, 2.2vw, 20px); max-width: 60ch; margin: 0 auto 30px; }
-      .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      h1 .hl {
+        color: var(--brand);
+      }
+      .hero .lede {
+        color: var(--dim);
+        font-size: clamp(17px, 2.2vw, 20px);
+        max-width: 60ch;
+        margin: 0 auto 30px;
+      }
+      .cta {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
       .btn {
-        display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600;
-        padding: 12px 22px; border-radius: 8px; border: 1px solid var(--hair); color: var(--ink); background: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 12px 22px;
+        border-radius: 8px;
+        border: 1px solid var(--hair);
+        color: var(--ink);
+        background: #fff;
       }
-      .btn:hover { text-decoration: none; border-color: #cfd8de; }
-      .btn.p { background: var(--brand); color: #fff; border-color: var(--brand); }
-      .btn.p:hover { background: var(--brand-ink); border-color: var(--brand-ink); }
-      .hero .meta { margin-top: 26px; color: var(--dim); font-size: 13px; }
+      .btn:hover {
+        text-decoration: none;
+        border-color: #cfd8de;
+      }
+      .btn.p {
+        background: var(--brand);
+        color: #fff;
+        border-color: var(--brand);
+      }
+      .btn.p:hover {
+        background: var(--brand-ink);
+        border-color: var(--brand-ink);
+      }
+      .hero .meta {
+        margin-top: 26px;
+        color: var(--dim);
+        font-size: 13px;
+      }
 
       /* simulated run panel */
-      .run { max-width: 600px; margin: 44px auto 0; text-align: left; border: 1px solid var(--hair);
-        border-radius: 14px; background: #fff; box-shadow: 0 18px 46px rgba(10, 31, 44, 0.10); overflow: hidden; }
-      .run .rhead { display: flex; align-items: center; justify-content: space-between;
-        padding: 11px 15px; border-bottom: 1px solid var(--hair); background: var(--alt); }
-      .run .rhead .t { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--navy); }
-      .run .rhead .mk { width: 16px; height: 16px; border-radius: 5px; background: var(--brand);
-        display: inline-flex; align-items: center; justify-content: center; }
-      .run .rt { display: flex; align-items: center; gap: 10px; }
-      .run .status { font-size: 12px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; }
-      .run .status.done { color: #1f9d63; }
-      .run .replay { border: 1px solid var(--hair); background: #fff; border-radius: 7px; font: inherit;
-        font-size: 12px; font-weight: 600; color: var(--ink); padding: 5px 11px; cursor: pointer; }
-      .run .replay:hover { border-color: #cfd8de; }
-      .run .rbody { padding: 14px 16px 18px; }
-      .run .meta2 { color: var(--dim); font-size: 12.5px; margin-bottom: 6px;
-        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
-      .run .case { display: grid; grid-template-columns: 1fr auto 52px; align-items: center; gap: 12px;
-        padding: 10px 0; border-top: 1px solid var(--hair); }
-      .run .nm { color: var(--ink); font-size: 14px; }
-      .run .chip { display: inline-block; margin-left: 8px; font-size: 11px; color: var(--brand-ink);
-        background: var(--brand-soft); border-radius: 5px; padding: 1px 7px; opacity: 0; transition: opacity .2s;
-        font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
-      .run .case.is-running .chip { opacity: 1; }
-      .run .dots { display: flex; gap: 5px; }
-      .run .dot { width: 8px; height: 8px; border-radius: 50%; background: #dfe6ea; transition: background .2s; }
-      .run .dot.p { background: #1f9d63; }
-      .run .verdict { text-align: right; font-size: 13px; font-weight: 600; color: var(--dim);
-        font-variant-numeric: tabular-nums; }
-      .run .case.is-done .verdict { color: #1f9d63; }
-      .run .case.is-pending .nm, .run .case.is-pending .verdict { opacity: .4; }
-      .run .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--brand-soft);
-        border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .run .bar { margin-top: 14px; height: 8px; background: #eef2f5; border-radius: 999px; overflow: hidden; }
-      .run .bar > span { display: block; height: 100%; width: 0; background: var(--brand);
-        border-radius: 999px; transition: width .45s ease; }
-      .run .sum { margin-top: 11px; font-size: 13px; color: var(--dim); }
-      .run .sum b { color: var(--navy); }
-      @media (prefers-reduced-motion: reduce) { .run .spin { animation: none; } .run .bar > span, .run .dot { transition: none; } }
+      .run {
+        max-width: 600px;
+        margin: 44px auto 0;
+        text-align: left;
+        border: 1px solid var(--hair);
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 18px 46px rgba(10, 31, 44, 0.1);
+        overflow: hidden;
+      }
+      .run .rhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 15px;
+        border-bottom: 1px solid var(--hair);
+        background: var(--alt);
+      }
+      .run .rhead .t {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .run .rhead .mk {
+        width: 16px;
+        height: 16px;
+        border-radius: 5px;
+        background: var(--brand);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .run .rt {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .run .status {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--dim);
+        font-variant-numeric: tabular-nums;
+      }
+      .run .status.done {
+        color: #1f9d63;
+      }
+      .run .replay {
+        border: 1px solid var(--hair);
+        background: #fff;
+        border-radius: 7px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink);
+        padding: 5px 11px;
+        cursor: pointer;
+      }
+      .run .replay:hover {
+        border-color: #cfd8de;
+      }
+      .run .rbody {
+        padding: 14px 16px 18px;
+      }
+      .run .meta2 {
+        color: var(--dim);
+        font-size: 12.5px;
+        margin-bottom: 6px;
+        font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+      }
+      .run .case {
+        display: grid;
+        grid-template-columns: 1fr auto 52px;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--hair);
+      }
+      .run .nm {
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .run .chip {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 11px;
+        color: var(--brand-ink);
+        background: var(--brand-soft);
+        border-radius: 5px;
+        padding: 1px 7px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+      }
+      .run .case.is-running .chip {
+        opacity: 1;
+      }
+      .run .dots {
+        display: flex;
+        gap: 5px;
+      }
+      .run .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #dfe6ea;
+        transition: background 0.2s;
+      }
+      .run .dot.p {
+        background: #1f9d63;
+      }
+      .run .verdict {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dim);
+        font-variant-numeric: tabular-nums;
+      }
+      .run .case.is-done .verdict {
+        color: #1f9d63;
+      }
+      .run .case.is-pending .nm,
+      .run .case.is-pending .verdict {
+        opacity: 0.4;
+      }
+      .run .spin {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--brand-soft);
+        border-top-color: var(--brand);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: -1px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .run .bar {
+        margin-top: 14px;
+        height: 8px;
+        background: #eef2f5;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .run .bar > span {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--brand);
+        border-radius: 999px;
+        transition: width 0.45s ease;
+      }
+      .run .sum {
+        margin-top: 11px;
+        font-size: 13px;
+        color: var(--dim);
+      }
+      .run .sum b {
+        color: var(--navy);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .run .spin {
+          animation: none;
+        }
+        .run .bar > span,
+        .run .dot {
+          transition: none;
+        }
+      }
 
-      section { padding: 68px 0; border-bottom: 1px solid var(--hair); }
+      section {
+        padding: 68px 0;
+        border-bottom: 1px solid var(--hair);
+      }
 
       /* how it works */
-      .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-      @media (max-width: 780px) { .steps { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 460px) { .steps { grid-template-columns: 1fr; } }
-      .step { background: var(--alt); border: 1px solid var(--hair); border-radius: var(--radius); padding: 20px 18px; }
-      .step .n { font-size: 12px; font-weight: 700; color: var(--brand); letter-spacing: 0.04em; }
-      .step h3 { font-size: 16px; margin: 8px 0 6px; color: var(--navy); }
-      .step p { margin: 0; color: var(--dim); font-size: 14px; }
-      .note { margin-top: 22px; color: var(--dim); font-size: 15px; }
-      .note b { color: var(--ink); }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      @media (max-width: 780px) {
+        .steps {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 460px) {
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+      .step {
+        background: var(--alt);
+        border: 1px solid var(--hair);
+        border-radius: var(--radius);
+        padding: 20px 18px;
+      }
+      .step .n {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--brand);
+        letter-spacing: 0.04em;
+      }
+      .step h3 {
+        font-size: 16px;
+        margin: 8px 0 6px;
+        color: var(--navy);
+      }
+      .step p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 14px;
+      }
+      .note {
+        margin-top: 22px;
+        color: var(--dim);
+        font-size: 15px;
+      }
+      .note b {
+        color: var(--ink);
+      }
 
       /* quickstart */
-      .qs { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
-      @media (max-width: 760px) { .qs { grid-template-columns: 1fr; } }
-      pre {
-        background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius);
-        padding: 20px 22px; overflow-x: auto; font-size: 13.5px; line-height: 1.75; margin: 0;
+      .qs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        align-items: start;
       }
-      pre .c { color: #6f8797; }
-      pre .g { color: #58d0a6; }
-      pre .b { color: var(--brand); }
-      .qs .side h3 { margin: 0 0 10px; font-size: 17px; color: var(--navy); }
-      .qs .side p { color: var(--dim); font-size: 15px; }
+      @media (max-width: 760px) {
+        .qs {
+          grid-template-columns: 1fr;
+        }
+      }
+      pre {
+        background: var(--code-bg);
+        color: var(--code-ink);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        overflow-x: auto;
+        font-size: 13.5px;
+        line-height: 1.75;
+        margin: 0;
+      }
+      pre .c {
+        color: #6f8797;
+      }
+      pre .g {
+        color: #58d0a6;
+      }
+      pre .b {
+        color: var(--brand);
+      }
+      .qs .side h3 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        color: var(--navy);
+      }
+      .qs .side p {
+        color: var(--dim);
+        font-size: 15px;
+      }
 
       /* features */
-      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px 26px; }
-      @media (max-width: 780px) { .grid { grid-template-columns: 1fr 1fr; } }
-      @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
-      .card h3 { font-size: 16px; margin: 0 0 6px; color: var(--navy); }
-      .card h3::before { content: "▶"; color: var(--brand); font-size: 10px; vertical-align: middle; margin-right: 9px; }
-      .card p { margin: 0; color: var(--dim); font-size: 14.5px; }
-      .card code { background: var(--alt); padding: 1px 6px; border-radius: 5px; font-size: 13px; color: var(--ink); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px 26px;
+      }
+      @media (max-width: 780px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 500px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card h3 {
+        font-size: 16px;
+        margin: 0 0 6px;
+        color: var(--navy);
+      }
+      .card h3::before {
+        content: '▶';
+        color: var(--brand);
+        font-size: 10px;
+        vertical-align: middle;
+        margin-right: 9px;
+      }
+      .card p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 14.5px;
+      }
+      .card code {
+        background: var(--alt);
+        padding: 1px 6px;
+        border-radius: 5px;
+        font-size: 13px;
+        color: var(--ink);
+      }
 
       /* dark CTA band (bitmovin-style) */
-      .band { background: var(--navy); color: #fff; text-align: center; border: 0;
-        background-image: radial-gradient(90% 120% at 50% 0%, rgba(31,171,226,0.18), transparent 55%); }
-      .band h2 { color: #fff; margin-bottom: 10px; }
-      .band p { color: #b7c6d0; font-size: 17px; max-width: 54ch; margin: 0 auto 26px; }
-      .band .btn { background: transparent; color: #fff; border-color: rgba(255,255,255,0.25); }
-      .band .btn:hover { border-color: #fff; }
-      .band .btn.p { background: var(--brand); border-color: var(--brand); }
-      .band .btn.p:hover { background: var(--brand-ink); }
+      .band {
+        background: var(--navy);
+        color: #fff;
+        text-align: center;
+        border: 0;
+        background-image: radial-gradient(90% 120% at 50% 0%, rgba(31, 171, 226, 0.18), transparent 55%);
+      }
+      .band h2 {
+        color: #fff;
+        margin-bottom: 10px;
+      }
+      .band p {
+        color: #b7c6d0;
+        font-size: 17px;
+        max-width: 54ch;
+        margin: 0 auto 26px;
+      }
+      .band .btn {
+        background: transparent;
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .band .btn:hover {
+        border-color: #fff;
+      }
+      .band .btn.p {
+        background: var(--brand);
+        border-color: var(--brand);
+      }
+      .band .btn.p:hover {
+        background: var(--brand-ink);
+      }
 
       /* footer */
-      footer { background: var(--navy); color: #93a6b2; padding: 30px 0; }
-      .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13.5px; }
-      .foot a { color: #d5e2ea; }
-      .foot .logo { color: #fff; }
-      .foot .logo .by { color: #93a6b2; }
+      footer {
+        background: var(--navy);
+        color: #93a6b2;
+        padding: 30px 0;
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 13.5px;
+      }
+      .foot a {
+        color: #d5e2ea;
+      }
+      .foot .logo {
+        color: #fff;
+      }
+      .foot .logo .by {
+        color: #93a6b2;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <header class="nav">
         <span class="logo">
-          <span class="mark"><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff"/></svg></span>
+          <span class="mark"
+            ><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff" /></svg
+          ></span>
           bitmcp-eval <span class="by">by Bitmovin</span>
         </span>
         <nav class="links">
@@ -207,9 +614,9 @@
         <span class="eyebrow">Open source · MIT</span>
         <h1>Evaluate how LLM agents actually <span class="hl">use</span> your MCP server</h1>
         <p class="lede">
-          You wrote an MCP server — but do agents pick the right tool for a given question?
-          bitmcp-eval runs your prompts through a real agent, records every call through a
-          proxy, and validates the tool calls against your expectations.
+          You wrote an MCP server — but do agents pick the right tool for a given question? bitmcp-eval runs your
+          prompts through a real agent, records every call through a proxy, and validates the tool calls against your
+          expectations.
         </p>
         <div class="cta">
           <a class="btn p" href="#quickstart">Get started</a>
@@ -219,7 +626,12 @@
 
         <div class="run" id="run" aria-label="Simulated bitmcp-eval run">
           <div class="rhead">
-            <span class="t"><span class="mk"><svg width="9" height="10" viewBox="0 0 9 10"><path d="M0 0 L9 5 L0 10 Z" fill="#fff"/></svg></span> bitmcp-eval · demo run</span>
+            <span class="t"
+              ><span class="mk"
+                ><svg width="9" height="10" viewBox="0 0 9 10"><path d="M0 0 L9 5 L0 10 Z" fill="#fff" /></svg
+              ></span>
+              bitmcp-eval · demo run</span
+            >
             <span class="rt">
               <span class="status done">done · 100%</span>
               <button class="replay" type="button">▶ Replay</button>
@@ -242,7 +654,7 @@
               <span class="dots"><span class="dot p"></span><span class="dot p"></span></span>
               <span class="verdict">2/2</span>
             </div>
-            <div class="bar"><span style="width:100%"></span></div>
+            <div class="bar"><span style="width: 100%"></span></div>
             <div class="sum">3 test cases · 6 iterations · <b>6 passed · 0 failed · 100%</b></div>
           </div>
         </div>
@@ -254,19 +666,34 @@
       <div class="wrap">
         <h2>A recording proxy, not a rewrite</h2>
         <p class="sec-lede">
-          bitmcp-eval starts a proxy in front of your server and points the agent at it.
-          Every message is forwarded byte-for-byte while a copy records each tool call.
+          bitmcp-eval starts a proxy in front of your server and points the agent at it. Every message is forwarded
+          byte-for-byte while a copy records each tool call.
         </p>
         <div class="steps">
-          <div class="step"><div class="n">01</div><h3>Your prompts</h3><p>YAML test cases naming the tools you expect the agent to call.</p></div>
-          <div class="step"><div class="n">02</div><h3>The agent</h3><p>claude or codex, run headlessly, once per iteration.</p></div>
-          <div class="step"><div class="n">03</div><h3>Recording proxy</h3><p>Forwards MCP traffic and records every <code>tools/call</code>.</p></div>
-          <div class="step"><div class="n">04</div><h3>Validate</h3><p>Recorded calls checked against expectations → live TUI + report.</p></div>
+          <div class="step">
+            <div class="n">01</div>
+            <h3>Your prompts</h3>
+            <p>YAML test cases naming the tools you expect the agent to call.</p>
+          </div>
+          <div class="step">
+            <div class="n">02</div>
+            <h3>The agent</h3>
+            <p>claude or codex, run headlessly, once per iteration.</p>
+          </div>
+          <div class="step">
+            <div class="n">03</div>
+            <h3>Recording proxy</h3>
+            <p>Forwards MCP traffic and records every <code>tools/call</code>.</p>
+          </div>
+          <div class="step">
+            <div class="n">04</div>
+            <h3>Validate</h3>
+            <p>Recorded calls checked against expectations → live TUI + report.</p>
+          </div>
         </div>
         <p class="note">
-          It operates on the transport layer over MCP StreamableHTTP, so the server under
-          test needs <b>zero changes</b> — local or remote, with headers or OAuth handled
-          transparently.
+          It operates on the transport layer over MCP StreamableHTTP, so the server under test needs
+          <b>zero changes</b> — local or remote, with headers or OAuth handled transparently.
         </p>
       </div>
     </section>
@@ -275,7 +702,9 @@
     <section id="quickstart">
       <div class="wrap">
         <h2>Quickstart</h2>
-        <p class="sec-lede">Two minutes against the bundled demo weather server, to verify your toolchain end to end.</p>
+        <p class="sec-lede">
+          Two minutes against the bundled demo weather server, to verify your toolchain end to end.
+        </p>
         <div class="qs">
           <pre><span class="c"># install &amp; build the monorepo</span>
 corepack enable
@@ -295,9 +724,9 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
 
 3 test cases · 6 iterations
 <span class="g">6 passed</span> · 0 failed · <span class="g">100%</span></pre>
-            <p style="margin-top:14px">
-              Then point <code>mcp.url</code> at your own server and write your test cases.
-              Full setup in the <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
+            <p style="margin-top: 14px">
+              Then point <code>mcp.url</code> at your own server and write your test cases. Full setup in the
+              <a href="https://github.com/bitmovin/bitmcp-eval#readme">README</a>.
             </p>
           </div>
         </div>
@@ -310,12 +739,44 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
         <h2>What's in the box</h2>
         <p class="sec-lede">Everything needed to turn "it seemed to work" into a measured pass rate.</p>
         <div class="grid">
-          <div class="card"><h3>Recording proxy</h3><p>Records every <code>tools/call</code> — name, arguments, result, error state and duration — with no changes to the server under test.</p></div>
-          <div class="card"><h3>claude &amp; codex</h3><p>Run one agent or both; the suite executes once per agent with per-agent pass rates.</p></div>
-          <div class="card"><h3>Iterations &amp; spread</h3><p>Each test case runs N times because agents are non-deterministic — you measure the spread, not one run.</p></div>
-          <div class="card"><h3>OAuth, handled</h3><p>A <code>401</code> is auto-detected; the proxy runs auth-code + PKCE and refreshes tokens. Dynamic client registration needs no config.</p></div>
-          <div class="card"><h3>Optional LLM judge</h3><p>A semantic verdict per iteration from any OpenAI-compatible endpoint. It flags disagreements; it never overrules the count.</p></div>
-          <div class="card"><h3>Live TUI &amp; HTML report</h3><p>Watch runs live, then share a self-contained report with each iteration's tool calls and full conversation.</p></div>
+          <div class="card">
+            <h3>Recording proxy</h3>
+            <p>
+              Records every <code>tools/call</code> — name, arguments, result, error state and duration — with no
+              changes to the server under test.
+            </p>
+          </div>
+          <div class="card">
+            <h3>claude &amp; codex</h3>
+            <p>Run one agent or both; the suite executes once per agent with per-agent pass rates.</p>
+          </div>
+          <div class="card">
+            <h3>Iterations &amp; spread</h3>
+            <p>
+              Each test case runs N times because agents are non-deterministic — you measure the spread, not one run.
+            </p>
+          </div>
+          <div class="card">
+            <h3>OAuth, handled</h3>
+            <p>
+              A <code>401</code> is auto-detected; the proxy runs auth-code + PKCE and refreshes tokens. Dynamic client
+              registration needs no config.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Optional LLM judge</h3>
+            <p>
+              A semantic verdict per iteration from any OpenAI-compatible endpoint. It flags disagreements; it never
+              overrules the count.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Live TUI &amp; HTML report</h3>
+            <p>
+              Watch runs live, then share a self-contained report with each iteration's tool calls and full
+              conversation.
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -336,7 +797,9 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
     <footer>
       <div class="wrap foot">
         <span class="logo">
-          <span class="mark"><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff"/></svg></span>
+          <span class="mark"
+            ><svg width="11" height="12" viewBox="0 0 11 12"><path d="M0 0 L11 6 L0 12 Z" fill="#fff" /></svg
+          ></span>
           bitmcp-eval <span class="by">by Bitmovin</span>
         </span>
         <span>
@@ -349,43 +812,68 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
 
     <script>
       (function () {
-        var run = document.getElementById("run");
+        var run = document.getElementById('run');
         if (!run) return;
-        var cases = Array.prototype.slice.call(run.querySelectorAll(".case"));
-        var bar = run.querySelector(".bar > span");
-        var status = run.querySelector(".status");
-        var replay = run.querySelector(".replay");
+        var cases = Array.prototype.slice.call(run.querySelectorAll('.case'));
+        var bar = run.querySelector('.bar > span');
+        var status = run.querySelector('.status');
+        var replay = run.querySelector('.replay');
         var total = cases.length * 2;
-        var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var timers = [];
-        function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
-        function clearAll() { timers.forEach(clearTimeout); timers = []; }
+        function at(ms, fn) {
+          timers.push(setTimeout(fn, ms));
+        }
+        function clearAll() {
+          timers.forEach(clearTimeout);
+          timers = [];
+        }
         function reset() {
           clearAll();
-          status.textContent = "running…";
-          status.classList.remove("done");
-          bar.style.width = "0%";
+          status.textContent = 'running…';
+          status.classList.remove('done');
+          bar.style.width = '0%';
           cases.forEach(function (c) {
-            c.className = "case is-pending";
-            c.querySelectorAll(".dot").forEach(function (d) { d.classList.remove("p"); });
-            c.querySelector(".verdict").textContent = "";
+            c.className = 'case is-pending';
+            c.querySelectorAll('.dot').forEach(function (d) {
+              d.classList.remove('p');
+            });
+            c.querySelector('.verdict').textContent = '';
           });
         }
         function play() {
           reset();
-          var passed = 0, t = 450;
+          var passed = 0,
+            t = 450;
           cases.forEach(function (c) {
-            var dots = c.querySelectorAll(".dot");
-            var v = c.querySelector(".verdict");
-            at(t, function () { c.className = "case is-running"; v.innerHTML = '<span class="spin"></span>'; });
-            at(t + 650, function () { dots[0].classList.add("p"); passed++; bar.style.width = Math.round((passed / total) * 100) + "%"; });
-            at(t + 1150, function () { dots[1].classList.add("p"); passed++; bar.style.width = Math.round((passed / total) * 100) + "%"; });
-            at(t + 1400, function () { c.className = "case is-done"; v.textContent = "2/2"; });
+            var dots = c.querySelectorAll('.dot');
+            var v = c.querySelector('.verdict');
+            at(t, function () {
+              c.className = 'case is-running';
+              v.innerHTML = '<span class="spin"></span>';
+            });
+            at(t + 650, function () {
+              dots[0].classList.add('p');
+              passed++;
+              bar.style.width = Math.round((passed / total) * 100) + '%';
+            });
+            at(t + 1150, function () {
+              dots[1].classList.add('p');
+              passed++;
+              bar.style.width = Math.round((passed / total) * 100) + '%';
+            });
+            at(t + 1400, function () {
+              c.className = 'case is-done';
+              v.textContent = '2/2';
+            });
             t += 1650;
           });
-          at(t, function () { status.textContent = "done · 6 passed · 100%"; status.classList.add("done"); });
+          at(t, function () {
+            status.textContent = 'done · 6 passed · 100%';
+            status.classList.add('done');
+          });
         }
-        replay.addEventListener("click", play);
+        replay.addEventListener('click', play);
         if (!reduce) at(600, play);
       })();
     </script>
