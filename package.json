@@ -31,8 +31,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "start": "yarn workspace @bitmcp-eval/cli start",
-    "dev": "yarn workspace @bitmcp-eval/cli dev",
+    "start": "node packages/cli/dist/cli.js",
+    "dev": "node --import tsx packages/cli/src/cli.tsx",
     "demo-server": "yarn workspace @bitmcp-eval/demo-mcp-server start"
   },
   "devDependencies": {

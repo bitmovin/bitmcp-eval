@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { homedir } from 'node:os';
+import { resolve } from 'node:path';
 import React from 'react';
 import { render } from 'ink';
 import meow from 'meow';
@@ -32,10 +34,27 @@ const cli = meow(
   },
 );
 
+const configPath = resolveConfigPath(cli.flags.config);
+
 if (cli.input[0] === 'login') {
-  await runLogin(cli.flags.config);
+  await runLogin(configPath);
 } else {
-  render(<App configPath={cli.flags.config} iterationsOverride={cli.flags.iterations} debug={cli.flags.debug} />);
+  render(<App configPath={configPath} iterationsOverride={cli.flags.iterations} debug={cli.flags.debug} />);
+}
+
+/**
+ * Resolve `--config` against the directory the command was actually invoked in,
+ * not the process cwd — the two can differ.
+ *
+ * `yarn start` reaches this CLI through a `yarn workspace` hop that moves the
+ * cwd into `packages/cli`, and a consumer wrapping the binary in their own
+ * package script may run it from a cwd other than where they typed the command.
+ * npm/yarn expose the original directory as `INIT_CWD`; a directly-invoked
+ * binary leaves it unset, and `process.cwd()` is already correct there.
+ */
+function resolveConfigPath(configFlag: string): string {
+  const expanded = configFlag.startsWith('~') ? configFlag.replace(/^~/, homedir()) : configFlag;
+  return resolve(process.env.INIT_CWD ?? process.cwd(), expanded);
 }
 
 /** Explicit login: pre-warm the token cache before a (possibly headless) run. */
