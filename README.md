@@ -421,6 +421,33 @@ yarn dev -c …       # run the TUI from TypeScript sources (tsx)
 Contributions are welcome — please run `yarn lint && yarn format:check && yarn test`
 before opening a PR (CI enforces all three).
 
+## Publishing
+
+`@bitmcp-eval/core` and `@bitmcp-eval/cli` are published together in lockstep —
+they always share the same version and are released as a pair. The CLI depends on
+core via Yarn's `workspace:*` protocol, which `yarn npm publish` rewrites to the
+exact matching version, so a core release always implies a CLI release.
+
+Both packages are scoped and published with public access (`publishConfig.access`).
+Publish with Yarn (not `npm publish`, which does not understand the `workspace:`
+protocol and would ship an uninstallable specifier):
+
+```sh
+# 1. bump both packages to the same new version
+yarn workspace @bitmcp-eval/core version <new-version>
+yarn workspace @bitmcp-eval/cli version <new-version>
+
+# 2. build from a clean tree so dist/ is current (only dist/ is published)
+yarn clean && yarn build
+
+# 3. publish core first, then the cli (which now pins the new core version)
+yarn workspace @bitmcp-eval/core npm publish
+yarn workspace @bitmcp-eval/cli npm publish
+```
+
+Publishing requires an npm account with access to the `@bitmcp-eval` scope
+(`yarn npm login`).
+
 ## Roadmap
 
 - Test case providers: S3, git repository
