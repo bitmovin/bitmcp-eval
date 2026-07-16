@@ -4,6 +4,21 @@
   "description": "Terminal UI for running bitmcp-eval evaluation runs against an MCP server",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bitmovin/bitmcp-eval.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://bitmovin.github.io/bitmcp-eval/",
+  "bugs": "https://github.com/bitmovin/bitmcp-eval/issues",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "evaluation",
+    "llm",
+    "agent",
+    "testing"
+  ],
   "bin": {
     "bitmcp-eval": "dist/cli.js"
   },
@@ -12,6 +27,9 @@
   ],
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
