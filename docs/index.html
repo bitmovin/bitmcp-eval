@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>bitmcp-eval — evaluate how LLM agents use your MCP server</title>
+    <title>bitmcp-eval: evaluate how LLM agents use your MCP server</title>
     <meta
       name="description"
-      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), records every call to your MCP server through a proxy, and validates the tool calls against your expectations — with an optional LLM judge and a static HTML report. An open-source tool by Bitmovin."
+      content="bitmcp-eval runs your prompts through a real chat agent (claude/codex), records every call to your MCP server through a proxy, and validates the tool calls against your expectations, with an optional LLM judge and a static HTML report. An open-source tool by Bitmovin."
     />
-    <meta property="og:title" content="bitmcp-eval — by Bitmovin" />
+    <meta property="og:title" content="bitmcp-eval by Bitmovin" />
     <meta property="og:description" content="Evaluate how LLM agents actually use your MCP server." />
     <meta property="og:type" content="website" />
     <link
@@ -614,7 +614,7 @@
         <span class="eyebrow">Open source · MIT</span>
         <h1>Evaluate how LLM agents actually <span class="hl">use</span> your MCP server</h1>
         <p class="lede">
-          You wrote an MCP server — but do agents pick the right tool for a given question? bitmcp-eval runs your
+          You wrote an MCP server. But do agents pick the right tool for a given question? bitmcp-eval runs your
           prompts through a real agent, records every call through a proxy, and validates the tool calls against your
           expectations.
         </p>
@@ -693,7 +693,7 @@
         </div>
         <p class="note">
           It operates on the transport layer over MCP StreamableHTTP, so the server under test needs
-          <b>zero changes</b> — local or remote, with headers or OAuth handled transparently.
+          <b>zero changes</b>: local or remote, with headers or OAuth handled transparently.
         </p>
       </div>
     </section>
@@ -711,10 +711,10 @@ corepack enable
 yarn install
 yarn build
 
-<span class="c"># terminal 1 — demo MCP server on :3210</span>
+<span class="c"># terminal 1: demo MCP server on :3210</span>
 yarn demo-server
 
-<span class="c"># terminal 2 — run the evaluation</span>
+<span class="c"># terminal 2: run the evaluation</span>
 yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="side">
             <h3>You get a pass rate, with the spread</h3>
@@ -742,7 +742,7 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="card">
             <h3>Recording proxy</h3>
             <p>
-              Records every <code>tools/call</code> — name, arguments, result, error state and duration — with no
+              Records every <code>tools/call</code> (name, arguments, result, error state and duration) with no
               changes to the server under test.
             </p>
           </div>
@@ -753,7 +753,7 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="card">
             <h3>Iterations &amp; spread</h3>
             <p>
-              Each test case runs N times because agents are non-deterministic — you measure the spread, not one run.
+              Each test case runs N times because agents are non-deterministic: you measure the spread, not one run.
             </p>
           </div>
           <div class="card">
