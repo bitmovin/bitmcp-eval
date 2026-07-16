@@ -614,9 +614,9 @@
         <span class="eyebrow">Open source · MIT</span>
         <h1>Evaluate how LLM agents actually <span class="hl">use</span> your MCP server</h1>
         <p class="lede">
-          You wrote an MCP server. But do agents pick the right tool for a given question? bitmcp-eval runs your
-          prompts through a real agent, records every call through a proxy, and validates the tool calls against your
-          expectations.
+          You built an MCP server, but you can only guess how agents actually use it. bitmcp-eval runs your prompts
+          through a real agent, records the traffic through a proxy, and compares the tool calls it sees with the ones
+          you expected.
         </p>
         <div class="cta">
           <a class="btn p" href="#quickstart">Get started</a>
@@ -664,7 +664,7 @@
     <!-- how it works -->
     <section id="how">
       <div class="wrap">
-        <h2>A recording proxy, not a rewrite</h2>
+        <h2>How it works</h2>
         <p class="sec-lede">
           bitmcp-eval starts a proxy in front of your server and points the agent at it. Every message is forwarded
           byte-for-byte while a copy records each tool call.
@@ -692,8 +692,8 @@
           </div>
         </div>
         <p class="note">
-          It operates on the transport layer over MCP StreamableHTTP, so the server under test needs
-          <b>zero changes</b>: local or remote, with headers or OAuth handled transparently.
+          The proxy works on the transport layer (MCP StreamableHTTP), so your server needs
+          <b>no changes at all</b>. It can run locally or remote, and the proxy takes care of auth headers and OAuth.
         </p>
       </div>
     </section>
@@ -702,9 +702,7 @@
     <section id="quickstart">
       <div class="wrap">
         <h2>Quickstart</h2>
-        <p class="sec-lede">
-          Two minutes against the bundled demo weather server, to verify your toolchain end to end.
-        </p>
+        <p class="sec-lede">Two minutes against the bundled demo weather server to verify your toolchain end to end.</p>
         <div class="qs">
           <pre><span class="c"># install &amp; build the monorepo</span>
 corepack enable
@@ -717,7 +715,7 @@ yarn demo-server
 <span class="c"># terminal 2: run the evaluation</span>
 yarn start <span class="b">-c</span> examples/eval.yaml</pre>
           <div class="side">
-            <h3>You get a pass rate, with the spread</h3>
+            <h3>Every test case gets a pass rate</h3>
             <pre><span class="g">✓</span> current weather lookup  2/2 passed
 <span class="g">✓</span> compare two forecasts   2/2 passed
 <span class="g">✓</span> list supported cities   2/2 passed
@@ -737,37 +735,38 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
     <section id="features">
       <div class="wrap">
         <h2>What's in the box</h2>
-        <p class="sec-lede">Everything needed to turn "it seemed to work" into a measured pass rate.</p>
+        <p class="sec-lede">What you get out of a run, and what the harness handles for you.</p>
         <div class="grid">
           <div class="card">
             <h3>Recording proxy</h3>
             <p>
-              Records every <code>tools/call</code> (name, arguments, result, error state and duration) with no
-              changes to the server under test.
+              Records every <code>tools/call</code> with name, arguments, result, error state and duration. The server
+              under test stays unchanged.
             </p>
           </div>
           <div class="card">
             <h3>claude &amp; codex</h3>
-            <p>Run one agent or both; the suite executes once per agent with per-agent pass rates.</p>
+            <p>Run one agent or both. The suite executes once per agent and the report shows pass rates for each.</p>
           </div>
           <div class="card">
             <h3>Iterations &amp; spread</h3>
             <p>
-              Each test case runs N times because agents are non-deterministic: you measure the spread, not one run.
+              Agents are non-deterministic, so each test case runs several times and the report shows how much the
+              behavior varies.
             </p>
           </div>
           <div class="card">
-            <h3>OAuth, handled</h3>
+            <h3>OAuth support</h3>
             <p>
-              A <code>401</code> is auto-detected; the proxy runs auth-code + PKCE and refreshes tokens. Dynamic client
-              registration needs no config.
+              When the server responds with a <code>401</code>, the proxy runs the auth-code + PKCE flow, caches the
+              token and refreshes it during long runs. Servers with dynamic client registration need no config.
             </p>
           </div>
           <div class="card">
             <h3>Optional LLM judge</h3>
             <p>
-              A semantic verdict per iteration from any OpenAI-compatible endpoint. It flags disagreements; it never
-              overrules the count.
+              An LLM reviews each iteration and adds a second, semantic verdict. Works with any OpenAI-compatible
+              endpoint, and the report highlights iterations where it disagrees with the tool-call result.
             </p>
           </div>
           <div class="card">
@@ -785,7 +784,7 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
     <section class="band">
       <div class="wrap">
         <h2>Put your MCP server under test</h2>
-        <p>Point it at your server and get a measured pass rate instead of a hunch.</p>
+        <p>Point it at your server, write a handful of test cases, and see how agents actually use your tools.</p>
         <div class="cta">
           <a class="btn p" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
           <a class="btn" href="https://github.com/bitmovin/bitmcp-eval#readme">Read the docs</a>
