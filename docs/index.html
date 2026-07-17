@@ -621,6 +621,7 @@
         <div class="cta">
           <a class="btn p" href="#quickstart">Get started</a>
           <a class="btn" href="https://github.com/bitmovin/bitmcp-eval">View on GitHub</a>
+          <a class="btn" href="https://www.npmjs.com/package/@bitmcp-eval/cli">View on npm</a>
         </div>
         <div class="meta">Node ≥ 20 &nbsp;·&nbsp; agents: claude, codex &nbsp;·&nbsp; zero server changes</div>
 
@@ -702,7 +703,19 @@
     <section id="quickstart">
       <div class="wrap">
         <h2>Quickstart</h2>
-        <p class="sec-lede">Two minutes against the bundled demo weather server to verify your toolchain end to end.</p>
+        <p class="sec-lede">
+          Install the CLI from npm to evaluate your own MCP server, or clone the repo to try it against the bundled demo
+          weather server first.
+        </p>
+        <pre><span class="c"># install the CLI from npm</span>
+npm install <span class="b">-g</span> @bitmcp-eval/cli
+bitmcp-eval <span class="b">-c</span> your-eval.yaml
+
+<span class="c"># or run it once, without installing</span>
+npx @bitmcp-eval/cli <span class="b">-c</span> your-eval.yaml</pre>
+        <p class="sec-lede" style="margin-top: 22px">
+          Want to see it work first? Clone the repo and run the two-minute demo against the bundled weather server:
+        </p>
         <div class="qs">
           <pre><span class="c"># install &amp; build the monorepo</span>
 corepack enable
@@ -803,6 +816,8 @@ yarn start <span class="b">-c</span> examples/eval.yaml</pre>
         </span>
         <span>
           <a href="https://github.com/bitmovin/bitmcp-eval">GitHub</a> ·
+          <a href="https://www.npmjs.com/package/@bitmcp-eval/cli">npm: cli</a> ·
+          <a href="https://www.npmjs.com/package/@bitmcp-eval/core">core</a> ·
           <a href="https://github.com/bitmovin/bitmcp-eval/blob/main/LICENSE">License (MIT)</a> ·
           <a href="https://bitmovin.com">bitmovin.com</a>
         </span>
