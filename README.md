@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/bitmovin/bitmcp-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/bitmovin/bitmcp-eval/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/%40bitmcp-eval%2Fcli?label=npm)](https://www.npmjs.com/package/@bitmcp-eval/cli)
 ![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
 
 **Evaluate how LLM agents actually use your MCP server.**
@@ -26,6 +27,11 @@ against your expectations — multiple times per prompt, because agent behavior 
 The proxy operates on the transport layer, so it needs **zero changes to your server**:
 anything that speaks the MCP StreamableHTTP protocol can be put under test — running
 locally or remote, with authentication (headers or OAuth) handled transparently.
+
+![HTML report of a bitmcp-eval run against the bundled demo server](docs/assets/report.png)
+
+_The HTML report of a real run against the bundled demo server: pass rates per test case
+and iteration, with every recorded tool call — arguments, results, durations._
 
 ## Contents
 
@@ -63,6 +69,7 @@ locally or remote, with authentication (headers or OAuth) handled transparently.
 ## Quickstart (2 minutes, bundled demo server)
 
 ```sh
+git clone https://github.com/bitmovin/bitmcp-eval && cd bitmcp-eval
 corepack enable
 yarn install
 yarn build
@@ -74,10 +81,12 @@ yarn demo-server
 yarn start -c examples/eval.yaml
 ```
 
-> **Running the CLI.** bitmcp-eval isn't published to npm yet, so every command in this
-> README is invoked as **`yarn start …`** from the repo. If you'd rather have a global
-> `bitmcp-eval` command, run `yarn build && yarn link` once inside `packages/cli`; then
-> `bitmcp-eval …` works anywhere. The two forms are interchangeable everywhere below.
+> **Running the CLI.** The CLI is published to npm as
+> [`@bitmcp-eval/cli`](https://www.npmjs.com/package/@bitmcp-eval/cli):
+> `npm install -g @bitmcp-eval/cli` gives you a global `bitmcp-eval` command (or run it
+> ad hoc with `npx @bitmcp-eval/cli …`). Inside this repo, **`yarn start …`** runs the
+> same CLI from source — the quickstart uses it because you need the checkout for the
+> demo server anyway. The two forms are interchangeable everywhere below.
 
 You'll watch every test case execute live, and at the end you get a link to a
 self-contained HTML report:
