@@ -1,6 +1,6 @@
 {
   "name": "@bitmcp-eval/cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Terminal UI for running bitmcp-eval evaluation runs against an MCP server",
   "type": "module",
   "license": "MIT",

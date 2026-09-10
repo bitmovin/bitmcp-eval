@@ -1,6 +1,6 @@
 {
   "name": "@bitmcp-eval/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Core engine of bitmcp-eval: recording proxy, test case loading, agent invocation, validation, and reporting",
   "type": "module",
   "license": "MIT",
