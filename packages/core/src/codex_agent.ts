@@ -1,10 +1,9 @@
-import { execFile } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import {
   AgentInvocationError,
   MCP_SERVER_ALIAS,
+  execAgentCli,
   makeNeutralWorkDir,
   removeNeutralWorkDir,
   type Agent,
@@ -12,8 +11,6 @@ import {
   type AgentSessionOptions,
   type AgentTurnResult,
 } from './agent.js';
-
-const execFileAsync = promisify(execFile);
 
 /**
  * Steers codex towards the server under test. Unlike claude's
@@ -75,15 +72,10 @@ class CodexExecSession implements AgentSession {
     try {
       // cwd (not `-C`) pins the working directory: `codex exec resume` does
       // not accept `-C`, but both invocations honor the process cwd.
-      const invocation = execFileAsync('codex', args, {
+      stdout = await execAgentCli('codex', args, {
         cwd: this.workDir,
-        timeout: this.options?.timeoutMs,
-        maxBuffer: 64 * 1024 * 1024,
+        timeoutMs: this.options?.timeoutMs,
       });
-      // codex exec treats piped stdin as extra prompt input and blocks until
-      // EOF — close it right away or every turn hangs until the timeout.
-      invocation.child.stdin?.end();
-      ({ stdout } = await invocation);
     } catch (err) {
       throw new AgentInvocationError('codex', err);
     }

@@ -1,6 +1,6 @@
 {
   "name": "bitmcp-eval",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Evaluation harness for MCP servers: run LLM agents against your server through a recording proxy and validate which tools they call",
   "private": true,
   "type": "module",

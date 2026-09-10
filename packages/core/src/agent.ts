@@ -19,6 +19,27 @@ export function removeNeutralWorkDir(dir: string): void {
   rmSync(dir, { recursive: true, force: true });
 }
 
+/**
+ * Runs one agent CLI turn and returns its stdout. stdin is closed
+ * immediately: left open (execFile's default pipe), claude stalls 3 seconds
+ * waiting for stdin data and logs a warning to stderr, while codex exec
+ * treats piped stdin as extra prompt input and blocks until EOF.
+ */
+export async function execAgentCli(
+  command: string,
+  args: string[],
+  options: { cwd: string; timeoutMs?: number },
+): Promise<string> {
+  const invocation = execFileAsync(command, args, {
+    cwd: options.cwd,
+    timeout: options.timeoutMs,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  invocation.child.stdin?.end();
+  const { stdout } = await invocation;
+  return stdout;
+}
+
 /** The chat agents this harness can drive. */
 export type AgentKind = 'claude' | 'codex';
 
@@ -114,11 +135,10 @@ class ClaudeCodeSession implements AgentSession {
 
     let stdout: string;
     try {
-      ({ stdout } = await execFileAsync('claude', args, {
+      stdout = await execAgentCli('claude', args, {
         cwd: this.workDir,
-        timeout: this.options?.timeoutMs,
-        maxBuffer: 64 * 1024 * 1024,
-      }));
+        timeoutMs: this.options?.timeoutMs,
+      });
     } catch (err) {
       throw new AgentInvocationError('claude', err);
     }
